@@ -75,4 +75,4 @@ if (process.env.NODE_ENV === 'production' || fs.existsSync(distDir)) {
   })
 }
 
-app.listen(PORT, () => console.log(`API :${PORT}`))
+app.listen(PORT, '0.0.0.0', () => console.log(`Server running on 0.0.0.0:${PORT}`))
