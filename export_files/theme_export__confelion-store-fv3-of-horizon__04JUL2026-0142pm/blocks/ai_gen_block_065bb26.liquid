@@ -1,0 +1,322 @@
+{% doc %}
+  @prompt
+    Create a slim trust strip section for a premium clothing brand named CONFELION.
+    
+    Layout:
+    
+    Full width horizontal strip
+    
+    Height: 80–96px mobile, 70px desktop
+    
+    4 evenly spaced columns
+    
+    Icon on top, text below, centered
+    
+    Background: soft off-white or light beige
+    
+    Content:
+    
+    Free Shipping Across India
+    
+    COD Available
+    
+    Easy 7-Day Returns
+    
+    Premium Fabric Quality
+    
+    Style:
+    
+    Minimal, clean, no borders, no cards
+    
+    Neutral colors (charcoal text, soft background)
+    
+    Modern sans-serif font
+    
+    Animation:
+    
+    Icons fade in from left to right with slight delay
+    
+    On hover/tap: icon lifts slightly (4px) and reduces opacity subtly
+    
+    Rules:
+    
+    No carousel
+    
+    No auto scroll
+    
+    No gradients
+    
+    Must feel premium and calm
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-trust-strip-{{ ai_gen_id }} {
+    display: block;
+    width: 100%;
+    background-color: {{ block.settings.background_color }};
+    padding: {{ block.settings.padding_mobile }}px 20px;
+  }
+
+  .ai-trust-strip-container-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat({{ block.settings.columns_mobile }}, 1fr);
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .ai-trust-strip-item-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .ai-trust-strip-item-{{ ai_gen_id }}.ai-trust-strip-visible-{{ ai_gen_id }} {
+    animation: ai-trust-strip-fade-in-{{ ai_gen_id }} 0.6s ease-out forwards;
+  }
+
+  .ai-trust-strip-icon-{{ ai_gen_id }} {
+    width: {{ block.settings.icon_size }}px;
+    height: {{ block.settings.icon_size }}px;
+    color: {{ block.settings.icon_color }};
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .ai-trust-strip-item-{{ ai_gen_id }}:hover .ai-trust-strip-icon-{{ ai_gen_id }},
+  .ai-trust-strip-item-{{ ai_gen_id }}:active .ai-trust-strip-icon-{{ ai_gen_id }} {
+    transform: translateY(-4px);
+    opacity: 0.7;
+  }
+
+  .ai-trust-strip-text-{{ ai_gen_id }} {
+    font-size: {{ block.settings.text_size }}px;
+    color: {{ block.settings.text_color }};
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+  }
+
+  @keyframes ai-trust-strip-fade-in-{{ ai_gen_id }} {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media screen and (min-width: 750px) {
+    .ai-trust-strip-{{ ai_gen_id }} {
+      padding: {{ block.settings.padding_desktop }}px 40px;
+    }
+
+    .ai-trust-strip-container-{{ ai_gen_id }} {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 30px;
+    }
+  }
+{% endstyle %}
+
+<trust-strip-{{ ai_gen_id }} class="ai-trust-strip-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-trust-strip-container-{{ ai_gen_id }}">
+    <div class="ai-trust-strip-item-{{ ai_gen_id }}" data-index="0">
+      <div class="ai-trust-strip-icon-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 7h-9"></path>
+          <path d="M14 17H5"></path>
+          <circle cx="17" cy="17" r="3"></circle>
+          <circle cx="7" cy="7" r="3"></circle>
+        </svg>
+      </div>
+      <div class="ai-trust-strip-text-{{ ai_gen_id }}">{{ block.settings.feature_1_text }}</div>
+    </div>
+
+    <div class="ai-trust-strip-item-{{ ai_gen_id }}" data-index="1">
+      <div class="ai-trust-strip-icon-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+          <line x1="1" y1="10" x2="23" y2="10"></line>
+        </svg>
+      </div>
+      <div class="ai-trust-strip-text-{{ ai_gen_id }}">{{ block.settings.feature_2_text }}</div>
+    </div>
+
+    <div class="ai-trust-strip-item-{{ ai_gen_id }}" data-index="2">
+      <div class="ai-trust-strip-icon-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 11 12 14 22 4"></polyline>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      </div>
+      <div class="ai-trust-strip-text-{{ ai_gen_id }}">{{ block.settings.feature_3_text }}</div>
+    </div>
+
+    <div class="ai-trust-strip-item-{{ ai_gen_id }}" data-index="3">
+      <div class="ai-trust-strip-icon-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+          <path d="M2 17l10 5 10-5"></path>
+          <path d="M2 12l10 5 10-5"></path>
+        </svg>
+      </div>
+      <div class="ai-trust-strip-text-{{ ai_gen_id }}">{{ block.settings.feature_4_text }}</div>
+    </div>
+  </div>
+</trust-strip-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class TrustStrip{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+      }
+
+      connectedCallback() {
+        this.items = this.querySelectorAll('.ai-trust-strip-item-{{ ai_gen_id }}');
+        this.animateItems();
+      }
+
+      animateItems() {
+        this.items.forEach((item, index) => {
+          setTimeout(() => {
+            item.classList.add('ai-trust-strip-visible-{{ ai_gen_id }}');
+          }, index * 100);
+        });
+      }
+    }
+
+    customElements.define('trust-strip-{{ ai_gen_id }}', TrustStrip{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Trust strip",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "Columns on mobile",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "range",
+      "id": "padding_mobile",
+      "label": "Mobile padding",
+      "min": 20,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_desktop",
+      "label": "Desktop padding",
+      "min": 20,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#FAF9F6"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#3D3D3D"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon",
+      "default": "#3D3D3D"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon size",
+      "min": 20,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "Text size",
+      "min": 11,
+      "max": 16,
+      "step": 1,
+      "unit": "px",
+      "default": 13
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "feature_1_text",
+      "label": "Feature 1",
+      "default": "Free Shipping Across India"
+    },
+    {
+      "type": "text",
+      "id": "feature_2_text",
+      "label": "Feature 2",
+      "default": "COD Available"
+    },
+    {
+      "type": "text",
+      "id": "feature_3_text",
+      "label": "Feature 3",
+      "default": "Easy 7-Day Returns"
+    },
+    {
+      "type": "text",
+      "id": "feature_4_text",
+      "label": "Feature 4",
+      "default": "Premium Fabric Quality"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Trust strip"
+    }
+  ]
+}
+{% endschema %}

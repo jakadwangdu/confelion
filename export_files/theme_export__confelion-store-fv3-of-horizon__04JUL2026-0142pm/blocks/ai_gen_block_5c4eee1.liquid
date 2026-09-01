@@ -1,0 +1,675 @@
+{% doc %}
+  @prompt
+    Create a mobile-only UI system for CONFELION with:
+    
+    TOP TOOLBAR (Collection Pages Only)
+    
+    Left button: Filter (opens collection filters)
+    
+    Right dropdown: Sort by (Featured, Price, New, Best)
+    
+    Sticky at top while scrolling
+    
+    BOTTOM STICKY NAV (All Pages)
+    
+    Fixed to bottom of screen
+    
+    4 icons only:
+    
+    Account → links to /account
+    
+    Shop → links to /collections
+    
+    Home → links to /
+    
+    Cart → opens cart drawer
+    
+    Remove Wishlist completely
+    
+    FUNCTIONAL RULES
+    
+    All buttons must be clickable
+    
+    Cart icon must update item count
+    
+    Filter opens actual filter panel
+    
+    Sort changes collection order
+    
+    STYLE
+    
+    Minimal line icons
+    
+    Black icons, white background
+    
+    1px top border
+    
+    Icon labels below
+    
+    RESPONSIVE
+    
+    Mobile only
+    
+    Hidden on desktop
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-mobile-ui-{{ ai_gen_id }} {
+    display: block;
+  }
+
+  @media screen and (min-width: 750px) {
+    .ai-mobile-ui-{{ ai_gen_id }} {
+      display: none;
+    }
+  }
+
+  .ai-top-toolbar-{{ ai_gen_id }} {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background-color: {{ block.settings.toolbar_bg_color }};
+    border-bottom: 1px solid {{ block.settings.border_color }};
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .ai-toolbar-button-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: {{ block.settings.icon_color }};
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+  }
+
+  .ai-toolbar-button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.hover_bg_color }};
+  }
+
+  .ai-toolbar-button-{{ ai_gen_id }} svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .ai-sort-dropdown-{{ ai_gen_id }} {
+    position: relative;
+  }
+
+  .ai-sort-select-{{ ai_gen_id }} {
+    appearance: none;
+    background-color: transparent;
+    border: none;
+    padding: 8px 32px 8px 12px;
+    cursor: pointer;
+    color: {{ block.settings.icon_color }};
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+  }
+
+  .ai-sort-select-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.hover_bg_color }};
+  }
+
+  .ai-sort-dropdown-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid {{ block.settings.icon_color }};
+    pointer-events: none;
+  }
+
+  .ai-bottom-nav-{{ ai_gen_id }} {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background-color: {{ block.settings.nav_bg_color }};
+    border-top: 1px solid {{ block.settings.border_color }};
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .ai-nav-item-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: {{ block.settings.icon_color }};
+    padding: 8px 16px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    transition: color 0.2s ease;
+    flex: 1;
+    max-width: 100px;
+  }
+
+  .ai-nav-item-{{ ai_gen_id }}:hover {
+    color: {{ block.settings.icon_hover_color }};
+  }
+
+  .ai-nav-icon-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    width: 24px;
+    height: 24px;
+  }
+
+  .ai-nav-item-{{ ai_gen_id }} svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .ai-nav-label-{{ ai_gen_id }} {
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .ai-cart-count-{{ ai_gen_id }} {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background-color: {{ block.settings.badge_bg_color }};
+    color: {{ block.settings.badge_text_color }};
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .ai-filter-overlay-{{ ai_gen_id }} {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .ai-filter-overlay-{{ ai_gen_id }}.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .ai-filter-panel-{{ ai_gen_id }} {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 400px;
+    background-color: {{ block.settings.panel_bg_color }};
+    z-index: 201;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ai-filter-panel-{{ ai_gen_id }}.active {
+    transform: translateX(0);
+  }
+
+  .ai-filter-header-{{ ai_gen_id }} {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid {{ block.settings.border_color }};
+    position: sticky;
+    top: 0;
+    background-color: {{ block.settings.panel_bg_color }};
+    z-index: 1;
+  }
+
+  .ai-filter-title-{{ ai_gen_id }} {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: {{ block.settings.icon_color }};
+  }
+
+  .ai-filter-close-{{ ai_gen_id }} {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: {{ block.settings.icon_color }};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ai-filter-close-{{ ai_gen_id }} svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .ai-filter-content-{{ ai_gen_id }} {
+    padding: 16px;
+    flex: 1;
+  }
+
+  .ai-filter-placeholder-{{ ai_gen_id }} {
+    color: {{ block.settings.icon_color }};
+    opacity: 0.6;
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+
+  @media screen and (max-width: 749px) {
+    body.ai-filter-open-{{ ai_gen_id }} {
+      overflow: hidden;
+    }
+  }
+{% endstyle %}
+
+<mobile-ui-{{ ai_gen_id }} class="ai-mobile-ui-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  {% if template.name == 'collection' %}
+    <div class="ai-top-toolbar-{{ ai_gen_id }}">
+      <button
+        class="ai-toolbar-button-{{ ai_gen_id }} ai-filter-trigger-{{ ai_gen_id }}"
+        aria-label="Open filters"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="18" x2="10" y2="18"></line>
+        </svg>
+        <span>{{ block.settings.filter_label }}</span>
+      </button>
+
+      <div class="ai-sort-dropdown-{{ ai_gen_id }}">
+        <select
+          class="ai-sort-select-{{ ai_gen_id }}"
+          aria-label="Sort products"
+          data-sort-select
+        >
+          <option value="manual">{{ block.settings.sort_featured_label }}</option>
+          <option value="price-ascending">{{ block.settings.sort_price_low_label }}</option>
+          <option value="price-descending">{{ block.settings.sort_price_high_label }}</option>
+          <option value="created-descending">{{ block.settings.sort_new_label }}</option>
+          <option value="best-selling">{{ block.settings.sort_best_label }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ai-filter-overlay-{{ ai_gen_id }}" data-filter-overlay></div>
+    <div class="ai-filter-panel-{{ ai_gen_id }}" data-filter-panel>
+      <div class="ai-filter-header-{{ ai_gen_id }}">
+        <h2 class="ai-filter-title-{{ ai_gen_id }}">{{ block.settings.filter_panel_title }}</h2>
+        <button class="ai-filter-close-{{ ai_gen_id }}" aria-label="Close filters">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="ai-filter-content-{{ ai_gen_id }}" data-filter-content>
+        <div class="ai-filter-placeholder-{{ ai_gen_id }}">
+          Filters will appear here when configured in your collection settings
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <nav class="ai-bottom-nav-{{ ai_gen_id }}">
+    <a href="/account" class="ai-nav-item-{{ ai_gen_id }}" aria-label="Account">
+      <div class="ai-nav-icon-wrapper-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </div>
+      <span class="ai-nav-label-{{ ai_gen_id }}">{{ block.settings.account_label }}</span>
+    </a>
+
+    <a href="/collections" class="ai-nav-item-{{ ai_gen_id }}" aria-label="Shop">
+      <div class="ai-nav-icon-wrapper-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+        </svg>
+      </div>
+      <span class="ai-nav-label-{{ ai_gen_id }}">{{ block.settings.shop_label }}</span>
+    </a>
+
+    <a href="/" class="ai-nav-item-{{ ai_gen_id }}" aria-label="Home">
+      <div class="ai-nav-icon-wrapper-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <span class="ai-nav-label-{{ ai_gen_id }}">{{ block.settings.home_label }}</span>
+    </a>
+
+    <button
+      class="ai-nav-item-{{ ai_gen_id }} ai-cart-trigger-{{ ai_gen_id }}"
+      aria-label="Cart"
+      data-cart-trigger
+    >
+      <div class="ai-nav-icon-wrapper-{{ ai_gen_id }}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <span class="ai-cart-count-{{ ai_gen_id }}" data-cart-count>0</span>
+      </div>
+      <span class="ai-nav-label-{{ ai_gen_id }}">{{ block.settings.cart_label }}</span>
+    </button>
+  </nav>
+</mobile-ui-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class MobileUI{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.filterTrigger = this.querySelector('.ai-filter-trigger-{{ ai_gen_id }}');
+        this.filterOverlay = this.querySelector('[data-filter-overlay]');
+        this.filterPanel = this.querySelector('[data-filter-panel]');
+        this.filterClose = this.querySelector('.ai-filter-close-{{ ai_gen_id }}');
+        this.sortSelect = this.querySelector('[data-sort-select]');
+        this.cartTrigger = this.querySelector('[data-cart-trigger]');
+        this.cartCount = this.querySelector('[data-cart-count]');
+        this.filterContent = this.querySelector('[data-filter-content]');
+      }
+
+      connectedCallback() {
+        this.setupEventListeners();
+        this.updateCartCount();
+        this.initializeFilters();
+        this.initializeSort();
+      }
+
+      setupEventListeners() {
+        if (this.filterTrigger) {
+          this.filterTrigger.addEventListener('click', () => this.openFilters());
+        }
+
+        if (this.filterClose) {
+          this.filterClose.addEventListener('click', () => this.closeFilters());
+        }
+
+        if (this.filterOverlay) {
+          this.filterOverlay.addEventListener('click', () => this.closeFilters());
+        }
+
+        if (this.sortSelect) {
+          this.sortSelect.addEventListener('change', (e) => this.handleSort(e));
+        }
+
+        if (this.cartTrigger) {
+          this.cartTrigger.addEventListener('click', () => this.openCart());
+        }
+
+        document.addEventListener('cart:updated', () => this.updateCartCount());
+      }
+
+      openFilters() {
+        if (this.filterOverlay && this.filterPanel) {
+          this.filterOverlay.classList.add('active');
+          this.filterPanel.classList.add('active');
+          document.body.classList.add('ai-filter-open-{{ ai_gen_id }}');
+        }
+      }
+
+      closeFilters() {
+        if (this.filterOverlay && this.filterPanel) {
+          this.filterOverlay.classList.remove('active');
+          this.filterPanel.classList.remove('active');
+          document.body.classList.remove('ai-filter-open-{{ ai_gen_id }}');
+        }
+      }
+
+      handleSort(event) {
+        const sortValue = event.target.value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('sort_by', sortValue);
+        window.location.href = url.toString();
+      }
+
+      openCart() {
+        const cartDrawer = document.querySelector('cart-drawer');
+        if (cartDrawer) {
+          cartDrawer.open();
+        } else {
+          window.location.href = '/cart';
+        }
+      }
+
+      updateCartCount() {
+        fetch('/cart.js')
+          .then(response => response.json())
+          .then(cart => {
+            if (this.cartCount) {
+              this.cartCount.textContent = cart.item_count;
+              this.cartCount.style.display = cart.item_count > 0 ? 'flex' : 'none';
+            }
+          })
+          .catch(error => console.error('Error fetching cart:', error));
+      }
+
+      initializeFilters() {
+        if (!this.filterContent) return;
+
+        const facetFilters = document.querySelector('facet-filters-form');
+        if (facetFilters) {
+          const filtersClone = facetFilters.cloneNode(true);
+          this.filterContent.innerHTML = '';
+          this.filterContent.appendChild(filtersClone);
+        }
+      }
+
+      initializeSort() {
+        if (!this.sortSelect) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentSort = urlParams.get('sort_by');
+        if (currentSort) {
+          this.sortSelect.value = currentSort;
+        }
+      }
+    }
+
+    customElements.define('mobile-ui-{{ ai_gen_id }}', MobileUI{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Mobile UI system",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Top toolbar"
+    },
+    {
+      "type": "text",
+      "id": "filter_label",
+      "label": "Filter button label",
+      "default": "Filter"
+    },
+    {
+      "type": "text",
+      "id": "filter_panel_title",
+      "label": "Filter panel title",
+      "default": "Filters"
+    },
+    {
+      "type": "header",
+      "content": "Sort options"
+    },
+    {
+      "type": "text",
+      "id": "sort_featured_label",
+      "label": "Featured label",
+      "default": "Featured"
+    },
+    {
+      "type": "text",
+      "id": "sort_price_low_label",
+      "label": "Price low to high label",
+      "default": "Price: Low to High"
+    },
+    {
+      "type": "text",
+      "id": "sort_price_high_label",
+      "label": "Price high to low label",
+      "default": "Price: High to Low"
+    },
+    {
+      "type": "text",
+      "id": "sort_new_label",
+      "label": "Newest label",
+      "default": "Newest"
+    },
+    {
+      "type": "text",
+      "id": "sort_best_label",
+      "label": "Best selling label",
+      "default": "Best Selling"
+    },
+    {
+      "type": "header",
+      "content": "Bottom navigation"
+    },
+    {
+      "type": "text",
+      "id": "account_label",
+      "label": "Account label",
+      "default": "Account"
+    },
+    {
+      "type": "text",
+      "id": "shop_label",
+      "label": "Shop label",
+      "default": "Shop"
+    },
+    {
+      "type": "text",
+      "id": "home_label",
+      "label": "Home label",
+      "default": "Home"
+    },
+    {
+      "type": "text",
+      "id": "cart_label",
+      "label": "Cart label",
+      "default": "Cart"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "toolbar_bg_color",
+      "label": "Toolbar background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "nav_bg_color",
+      "label": "Navigation background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "panel_bg_color",
+      "label": "Filter panel background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon and text color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "icon_hover_color",
+      "label": "Icon hover color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border color",
+      "default": "#e6e6e6"
+    },
+    {
+      "type": "color",
+      "id": "hover_bg_color",
+      "label": "Hover background",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "color",
+      "id": "badge_bg_color",
+      "label": "Cart badge background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "badge_text_color",
+      "label": "Cart badge text",
+      "default": "#ffffff"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Mobile UI system"
+    }
+  ]
+}
+{% endschema %}
