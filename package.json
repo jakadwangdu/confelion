@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build": "npm install --prefix confelion-frontend && npm run build --prefix confelion-frontend",
     "dev:frontend": "npm run dev --prefix confelion-frontend",
     "build:frontend": "npm run build --prefix confelion-frontend",
     "test:api": "node test-api.js"
