@@ -440,10 +440,10 @@ function ProductResults({products, loading, viewMode}) {
             style={{animationDelay: `${60 + (index % 8) * 35}ms`}}
             role="listitem"
           >
-            <div className="aspect-[4/5] bg-zinc-50 rounded-xl overflow-hidden relative border border-zinc-100/80 transition-all duration-300 group-hover:shadow-md">
-              <div className="absolute top-3 left-3 z-10">
+            <div className="aspect-square bg-zinc-50 overflow-hidden relative transition-all duration-300 group-hover:shadow-md">
+              <div className="absolute top-1.5 left-1.5 z-10">
                 <span className="badge-new-street uppercase">
-                  NEW★
+                  SALE
                 </span>
               </div>
 
@@ -453,8 +453,8 @@ function ProductResults({products, loading, viewMode}) {
                 tags={product.tags}
                 src={product.light_image || product.image_url}
                 w={500}
-                h={625}
-                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                h={500}
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
             </div>

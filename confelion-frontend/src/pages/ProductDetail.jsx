@@ -173,12 +173,12 @@ export default function ProductDetail() {
           
           {/* LEFT: Product Images with NEW badge & Dots */}
           <div className="lg:col-span-7 flex flex-col">
-            <div className="relative aspect-[4/5] bg-zinc-50 rounded-xl overflow-hidden group select-none">
+            <div className="relative aspect-square bg-zinc-50 overflow-hidden group select-none">
               
-              {/* NEW Badge in Top-Left Corner */}
-              <div className="absolute top-4 left-4 z-20">
+              {/* SALE Badge in Top-Left Corner */}
+              <div className="absolute top-2 left-2 z-20">
                 <span className="badge-new-street uppercase">
-                  NEW★
+                  SALE
                 </span>
               </div>
 
@@ -189,8 +189,8 @@ export default function ProductDetail() {
                 tags={product.tags}
                 src={mainImage}
                 w={1000}
-                h={1250}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                h={1000}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                 priority
               />
 
@@ -240,7 +240,7 @@ export default function ProductDetail() {
                   <button
                     key={i}
                     onClick={() => setSelectedThumb(i)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    className={`aspect-square overflow-hidden border-2 transition-all ${
                       i === selectedThumb
                         ? "border-black shadow-sm scale-[1.02]"
                         : "border-zinc-200 opacity-70 hover:opacity-100"

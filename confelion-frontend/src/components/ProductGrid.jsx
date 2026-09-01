@@ -23,12 +23,12 @@ export default function ProductGrid({products, title, className = ""}) {
               className="group flex flex-col animate-fade-in animate-slide-up-sm select-none"
               style={{animationDelay: `${60 + (index % 8) * 35}ms`}}
             >
-              {/* Card Image Container with NEW Badge */}
-              <div className="aspect-[4/5] bg-zinc-50 rounded-xl overflow-hidden relative border border-zinc-100/80 transition-all duration-300 group-hover:shadow-md">
-                {/* NEW Badge */}
-                <div className="absolute top-3 left-3 z-10">
+              {/* Card Image Container with SALE Badge */}
+              <div className="aspect-square bg-zinc-50 overflow-hidden relative transition-all duration-300 group-hover:shadow-md">
+                {/* SALE Badge */}
+                <div className="absolute top-1.5 left-1.5 z-10">
                   <span className="badge-new-street uppercase">
-                    NEW★
+                    SALE
                   </span>
                 </div>
 
@@ -38,8 +38,8 @@ export default function ProductGrid({products, title, className = ""}) {
                   tags={product.tags}
                   src={product.light_image || product.image_url}
                   w={500}
-                  h={625}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                  h={500}
+                  className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                 />
                 
                 {/* Subtle Hover Gradient */}
