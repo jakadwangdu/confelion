@@ -393,11 +393,11 @@ function ProductResults({products, loading, viewMode}) {
     return (
       <div className="product-grid animate-fade-in" role="status" aria-label="Loading products">
         {[...Array(8)].map((_, i) => (
-          <div key={i} className="card">
+          <div key={i} className="card rounded-xl overflow-hidden">
             <div className="aspect-[3/4] skeleton" />
-            <div className="p-4 space-y-3">
-              <div className="h-4 w-3/4 skeleton rounded" />
-              <div className="h-3 w-1/2 skeleton rounded" />
+            <div className="p-2.5 sm:p-4 space-y-2">
+              <div className="h-3.5 sm:h-4 w-3/4 skeleton rounded" />
+              <div className="h-2.5 sm:h-3 w-1/2 skeleton rounded" />
             </div>
           </div>
         ))}
@@ -408,12 +408,12 @@ function ProductResults({products, loading, viewMode}) {
   if (products.length === 0) {
     return (
       <div className="text-center py-16 animate-fade-in animate-slide-up-sm">
-        <div className="text-5xl mb-4">&#128269;</div>
-        <h3 className="heading-4 mb-2">No products found</h3>
-        <p className="body-md text-text-muted mb-6">Try adjusting your filter or search</p>
+        <div className="text-4xl sm:text-5xl mb-4">&#128269;</div>
+        <h3 className="text-lg sm:text-xl font-bold mb-2">No products found</h3>
+        <p className="text-sm text-zinc-500 mb-6">Try adjusting your filter or search</p>
         <Link
           to="/products"
-          className="btn-primary inline-block"
+          className="btn-primary inline-block text-sm"
         >
           View All Products
         </Link>
@@ -423,55 +423,67 @@ function ProductResults({products, loading, viewMode}) {
 
   return (
     <div
-      className={`product-grid animate-fade-in animate-slide-up-sm ${viewMode === "list" ? "grid-cols-1" : ""}`}
-      style={{animationDelay: "200ms"}}
+      className={`grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 animate-fade-in animate-slide-up-sm ${viewMode === "list" ? "!grid-cols-1" : ""}`}
+      style={{animationDelay: "150ms"}}
       role="list"
       aria-label="Products"
     >
-      {products.map((product, index) => (
-        <Link
-          key={product.handle}
-          to={`/product/${product.handle}`}
-          className="group product-card"
-          style={{animationDelay: `${200 + (index % 8) * 50}ms`}}
-          role="listitem"
-        >
-          <div className="product-card-image">
-            <LightImage
-              handle={product.handle}
-              title={product.title}
-              tags={product.tags}
-              src={product.light_image || product.image_url}
-              w={400}
-              h={500}
-              className="w-full h-full object-cover"
-            />
-            <div className="product-card-overlay" />
-            {product.compare_at_price && parseFloat(product.compare_at_price) > parseFloat(product.price || 0) && (
-              <span className="absolute top-3 left-3 badge-error">
-                Sale
-              </span>
-            )}
-            {product.tags?.toLowerCase().includes("new") && (
-              <span className="absolute top-3 right-3 badge-accent">
-                New
-              </span>
-            )}
-          </div>
-          <div className="product-card-content">
-            <h3 className="product-card-title">{product.title}</h3>
-            <p className="product-card-meta">
-              {product.vendor} &bull; {product.type}
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-base font-bold text-brand-900">&#x20B9;{product.price}</span>
-              {product.compare_at_price && parseFloat(product.compare_at_price) > parseFloat(product.price || 0) && (
-                <span className="text-sm line-through text-text-muted">&#x20B9;{product.compare_at_price}</span>
-              )}
+      {products.map((product, index) => {
+        const priceVal = typeof product.price === "number" ? product.price : parseFloat(product.price || 1399)
+        const compareVal = product.compare_at_price ? (typeof product.compare_at_price === "number" ? product.compare_at_price : parseFloat(product.compare_at_price)) : (priceVal > 1000 ? priceVal + 201 : null)
+
+        return (
+          <Link
+            key={product.handle}
+            to={`/product/${product.handle}`}
+            className="group flex flex-col animate-fade-in animate-slide-up-sm select-none"
+            style={{animationDelay: `${60 + (index % 8) * 35}ms`}}
+            role="listitem"
+          >
+            <div className="aspect-[4/5] bg-zinc-50 rounded-xl overflow-hidden relative border border-zinc-100/80 transition-all duration-300 group-hover:shadow-md">
+              <div className="absolute top-3 left-3 z-10">
+                <span className="badge-new-street uppercase">
+                  NEW★
+                </span>
+              </div>
+
+              <LightImage
+                handle={product.handle}
+                title={product.title}
+                tags={product.tags}
+                src={product.light_image || product.image_url}
+                w={500}
+                h={625}
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
             </div>
-          </div>
-        </Link>
-      ))}
+
+            <div className="flex items-center justify-center gap-1 mt-2.5 py-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 group-hover:bg-black transition-colors" />
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-200" />
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-200" />
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-200" />
+            </div>
+
+            <div className="pt-2 text-left">
+              <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-zinc-900 truncate group-hover:text-black transition-colors">
+                {product.title}
+              </h3>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-xs sm:text-sm font-bold price-rust">
+                  Rs. {priceVal ? priceVal.toLocaleString("en-IN", {minimumFractionDigits: 2}) : "1,399.00"}
+                </span>
+                {compareVal && compareVal > priceVal && (
+                  <span className="text-[10px] sm:text-xs font-normal text-zinc-400 line-through">
+                    Rs. {compareVal.toLocaleString("en-IN", {minimumFractionDigits: 2})}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        )
+      })}
     </div>
   )
 }

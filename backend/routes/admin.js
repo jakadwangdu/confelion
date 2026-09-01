@@ -12,16 +12,47 @@ const upload=multer({
   }
 })
 
-async function saveCompressedImage(buffer, originalName){
-  const base=path.parse(originalName||'upload').name.replace(/[^a-z0-9_-]/gi,'_') || 'img'
-  const filename=`${base}_${Date.now()}.webp`
-  const outPath=path.join(UPLOAD_DIR,filename)
+async function saveCompressedHeroImage(buffer, originalName){
+  const base = path.parse(originalName||'hero').name.replace(/[^a-z0-9_-]/gi,'_') || 'hero'
+  const filename = `hero_${base}_${Date.now()}.webp`
+  const outPath = path.join(UPLOAD_DIR, filename)
   await sharp(buffer)
-    .resize(400,500,{fit:'cover', withoutEnlargement:false})
-    .webp({quality:75, effort:4})
+    .resize(1920, 1080, {fit: 'inside', withoutEnlargement: true})
+    .webp({quality: 82, effort: 4})
     .toFile(outPath)
-  return `/uploads/${filename}`
+  const stats = fs.statSync(outPath)
+  return {url: `/uploads/${filename}`, size: stats.size}
 }
+
+async function saveCompressedProductImage(buffer, originalName, index = 0){
+  const base = path.parse(originalName||'prod').name.replace(/[^a-z0-9_-]/gi,'_') || 'prod'
+  const filename = `prod_${base}_${Date.now()}_${index}.webp`
+  const outPath = path.join(UPLOAD_DIR, filename)
+  await sharp(buffer)
+    .resize(1000, 1250, {fit: 'cover', withoutEnlargement: true})
+    .webp({quality: 78, effort: 4})
+    .toFile(outPath)
+  const stats = fs.statSync(outPath)
+  return {url: `/uploads/${filename}`, size: stats.size}
+}
+
+async function saveCompressedSizeChartImage(buffer, originalName){
+  const base = path.parse(originalName||'size_chart').name.replace(/[^a-z0-9_-]/gi,'_') || 'size_chart'
+  const filename = `size_chart_${base}_${Date.now()}.webp`
+  const outPath = path.join(UPLOAD_DIR, filename)
+  await sharp(buffer)
+    .resize(1400, 1800, {fit: 'inside', withoutEnlargement: true})
+    .webp({quality: 82, effort: 4})
+    .toFile(outPath)
+  const stats = fs.statSync(outPath)
+  return {url: `/uploads/${filename}`, size: stats.size}
+}
+
+async function saveCompressedImage(buffer, originalName){
+  const res = await saveCompressedProductImage(buffer, originalName)
+  return res.url
+}
+
 function normalizeImageUrl(url){
   if(!url) return url
   if(url.startsWith('/uploads/')) return url
@@ -33,12 +64,81 @@ module.exports=db=>{
  const r=require('express').Router()
  r.use(auth,admin)
  
- // Upload + auto compress (standalone)
+ // Upload Hero image with high-efficiency compression
+ r.post('/upload-hero', upload.single('image'), async (q,s)=>{
+   try{
+     if(!q.file) return s.status(400).json({error:'No image file provided (field: image)'})
+     const {url, size: compressedSize} = await saveCompressedHeroImage(q.file.buffer, q.file.originalname)
+     db.prepare('INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES(?,?,CURRENT_TIMESTAMP)').run('hero_image', url)
+     s.json({
+       url,
+       success: true,
+       compressed: true,
+       originalSize: q.file.size,
+       compressedSize,
+       savingsPercent: Math.round((1 - compressedSize / q.file.size) * 100)
+     })
+   }catch(e){
+     s.status(500).json({error:e.message})
+   }
+ })
+
+ // Upload Size Chart image with auto-compression
+ r.post('/upload-size-chart', upload.single('image'), async (q,s)=>{
+   try{
+     if(!q.file) return s.status(400).json({error:'No image file provided (field: image)'})
+     const {url, size: compressedSize} = await saveCompressedSizeChartImage(q.file.buffer, q.file.originalname)
+     db.prepare('INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES(?,?,CURRENT_TIMESTAMP)').run('size_chart_image', url)
+     s.json({
+       url,
+       success: true,
+       compressed: true,
+       originalSize: q.file.size,
+       compressedSize,
+       savingsPercent: Math.round((1 - compressedSize / q.file.size) * 100)
+     })
+   }catch(e){
+     s.status(500).json({error:e.message})
+   }
+ })
+
+ // Upload multiple images with auto compression (up to 10 images)
+ r.post('/upload-multiple', upload.array('images', 10), async (q,s)=>{
+   try{
+     if(!q.files || q.files.length === 0) return s.status(400).json({error:'No image files provided (field: images)'})
+     const results = await Promise.all(
+       q.files.map((file, idx) => saveCompressedProductImage(file.buffer, file.originalname, idx))
+     )
+     const images = results.map((res, idx) => ({
+       url: res.url,
+       originalName: q.files[idx].originalname,
+       originalSize: q.files[idx].size,
+       compressedSize: res.size,
+       savingsPercent: Math.round((1 - res.size / q.files[idx].size) * 100)
+     }))
+     s.json({
+       images,
+       urls: results.map(r => r.url),
+       success: true,
+       count: images.length
+     })
+   }catch(e){
+     s.status(500).json({error:e.message})
+   }
+ })
+
+ // Upload single product image + auto compress
  r.post('/upload', upload.single('image'), async (q,s)=>{
    try{
      if(!q.file) return s.status(400).json({error:'No image file (field: image)'})
-     const url=await saveCompressedImage(q.file.buffer, q.file.originalname)
-     s.json({url, compressed:true, originalSize:q.file.size})
+     const {url, size: compressedSize} = await saveCompressedProductImage(q.file.buffer, q.file.originalname)
+     s.json({
+       url,
+       compressed: true,
+       originalSize: q.file.size,
+       compressedSize,
+       savingsPercent: Math.round((1 - compressedSize / q.file.size) * 100)
+     })
    }catch(e){
      s.status(500).json({error:e.message})
    }
@@ -52,22 +152,63 @@ module.exports=db=>{
         (SELECT inventory_quantity FROM variants WHERE product_id=p.id LIMIT 1) as qty,
         (SELECT id FROM variants WHERE product_id=p.id LIMIT 1) as variant_id,
         (SELECT price FROM variants WHERE product_id=p.id LIMIT 1) as price,
-        (SELECT image_url FROM product_images WHERE product_id=p.id LIMIT 1) as image_url
+        (SELECT image_url FROM product_images WHERE product_id=p.id ORDER BY position ASC, id ASC LIMIT 1) as image_url
       FROM products p ORDER BY p.id DESC`).all()
-    s.json(rows.map(p=>({...p, ai_image:aiUrl(p.handle,p.title,p.tags), light_image: p.image_url? shopifyLight(p.image_url): null })))
+
+    const enriched = rows.map(p => {
+      const productImages = db.prepare('SELECT id, image_url, position FROM product_images WHERE product_id=? ORDER BY position ASC, id ASC').all(p.id)
+      const primaryImage = productImages[0]?.image_url || p.image_url
+      return {
+        ...p,
+        image_url: primaryImage,
+        images: productImages.map(img => img.image_url),
+        productImages,
+        ai_image: aiUrl(p.handle, p.title, p.tags),
+        light_image: primaryImage ? shopifyLight(primaryImage) : null
+      }
+    })
+    s.json(enriched)
   }catch(e){ s.status(500).json({error:e.message}) }
  })
 
- r.post('/products', upload.single('image'), async (q,s)=>{
+ r.post('/products', upload.array('images', 10), async (q,s)=>{
   try{
    const {handle,title,vendor,type,tags,price,compare_at_price,qty,size}=q.body
    let image_url=q.body.image_url
-   if(q.file){
-     image_url=await saveCompressedImage(q.file.buffer, q.file.originalname)
-   } else if(image_url){
-     image_url=normalizeImageUrl(image_url)
+   let imagesList = []
+
+   // Parse images if passed as array or JSON string or comma-separated
+   if (q.body.images) {
+     if (Array.isArray(q.body.images)) {
+       imagesList = q.body.images.map(normalizeImageUrl).filter(Boolean)
+     } else if (typeof q.body.images === 'string') {
+       try {
+         const parsed = JSON.parse(q.body.images)
+         if (Array.isArray(parsed)) imagesList = parsed.map(normalizeImageUrl).filter(Boolean)
+         else imagesList = q.body.images.split(',').map(s=>normalizeImageUrl(s.trim())).filter(Boolean)
+       } catch {
+         imagesList = q.body.images.split(',').map(s=>normalizeImageUrl(s.trim())).filter(Boolean)
+       }
+     }
    }
+
+   // Process uploaded files if any
+   if (q.files && q.files.length > 0) {
+     const uploaded = await Promise.all(
+       q.files.map((file, idx) => saveCompressedProductImage(file.buffer, file.originalname, idx))
+     )
+     const uploadedUrls = uploaded.map(u => u.url)
+     imagesList = [...imagesList, ...uploadedUrls]
+   }
+
+   // If single image_url provided and not already in list
+   if (image_url) {
+     const norm = normalizeImageUrl(image_url)
+     if (norm && !imagesList.includes(norm)) imagesList.unshift(norm)
+   }
+
    if(!handle||!title) return s.status(400).json({error:'handle+title required'})
+
    const tx=db.transaction(()=>{
      const p=db.prepare('INSERT INTO products(handle,title,vendor,type,tags,published) VALUES(?,?,?,?,?,1)').run(handle,title,vendor||'CONFELION',type||'clothes',tags||'')
      const pid=p.lastInsertRowid
@@ -75,28 +216,55 @@ module.exports=db=>{
      const toInsert=sizes.length?sizes:['M']
      toInsert.forEach(sz=>db.prepare('INSERT INTO options(product_id,name,value) VALUES(?,?,?)').run(pid,'Size',sz))
      db.prepare('INSERT INTO variants(product_id,sku,price,compare_at_price,inventory_quantity,status) VALUES(?,?,?,?,?,?)').run(pid,handle+'-'+toInsert[0],+price||999,+compare_at_price||null,+qty||10,'active')
-     const finalImage=image_url || aiUrl(handle,title,tags)
-     db.prepare('INSERT INTO product_images(product_id,image_url,position) VALUES(?,?,1)').run(pid,finalImage)
+     
+     const finalImages = imagesList.length > 0 ? imagesList : [aiUrl(handle,title,tags)]
+     finalImages.forEach((imgUrl, idx) => {
+       db.prepare('INSERT INTO product_images(product_id,image_url,position) VALUES(?,?,?)').run(pid, imgUrl, idx + 1)
+     })
      return pid
    })
    const pid=tx()
-   s.json({id:pid,handle, image_url: image_url || aiUrl(handle,title,tags)})
+   s.json({id:pid, handle, images: imagesList, image_url: imagesList[0] || aiUrl(handle,title,tags)})
   }catch(e){
    if(e.code==='SQLITE_CONSTRAINT_UNIQUE' || (e.message && e.message.includes('UNIQUE'))) return s.status(409).json({error:'Handle already exists'})
    s.status(500).json({error:e.message})
   }
  })
 
- r.put('/products/:handle', upload.single('image'), async (q,s)=>{
+ r.put('/products/:handle', upload.array('images', 10), async (q,s)=>{
   try{
    const p=db.prepare('SELECT id FROM products WHERE handle=?').get(q.params.handle)
    if(!p) return s.status(404).json({error:'Not found'})
    let {title,vendor,type,tags,price,qty,size,image_url,compare_at_price}=q.body
-   if(q.file){
-     image_url=await saveCompressedImage(q.file.buffer, q.file.originalname)
-   } else if(image_url){
-     image_url=normalizeImageUrl(image_url)
+   
+   let imagesList = null
+   if (q.body.images !== undefined) {
+     if (Array.isArray(q.body.images)) {
+       imagesList = q.body.images.map(normalizeImageUrl).filter(Boolean)
+     } else if (typeof q.body.images === 'string') {
+       try {
+         const parsed = JSON.parse(q.body.images)
+         if (Array.isArray(parsed)) imagesList = parsed.map(normalizeImageUrl).filter(Boolean)
+         else imagesList = q.body.images.split(',').map(s=>normalizeImageUrl(s.trim())).filter(Boolean)
+       } catch {
+         imagesList = q.body.images.split(',').map(s=>normalizeImageUrl(s.trim())).filter(Boolean)
+       }
+     }
    }
+
+   // Process uploaded files if any
+   if (q.files && q.files.length > 0) {
+     const uploaded = await Promise.all(
+       q.files.map((file, idx) => saveCompressedProductImage(file.buffer, file.originalname, idx))
+     )
+     const uploadedUrls = uploaded.map(u => u.url)
+     imagesList = imagesList ? [...imagesList, ...uploadedUrls] : uploadedUrls
+   }
+
+   if (image_url && !imagesList) {
+     imagesList = [normalizeImageUrl(image_url)]
+   }
+
    const tx=db.transaction(()=>{
      if(title||vendor||type||tags){
        const cur=db.prepare('SELECT title,vendor,type,tags FROM products WHERE id=?').get(p.id)
@@ -109,56 +277,72 @@ module.exports=db=>{
        db.prepare('DELETE FROM options WHERE product_id=? AND name=?').run(p.id,'Size')
        size.split(',').forEach(v=>{ const t=v.trim(); if(t) db.prepare('INSERT INTO options(product_id,name,value) VALUES(?,?,?)').run(p.id,'Size',t)})
      }
-     if(image_url){
+     if(imagesList && Array.isArray(imagesList)){
        db.prepare('DELETE FROM product_images WHERE product_id=?').run(p.id)
-       db.prepare('INSERT INTO product_images(product_id,image_url,position) VALUES(?,?,1)').run(p.id,image_url)
+       imagesList.forEach((imgUrl, idx) => {
+         db.prepare('INSERT INTO product_images(product_id,image_url,position) VALUES(?,?,?)').run(p.id, imgUrl, idx + 1)
+       })
      }
    })
    tx()
-   s.json({success:true, image_url})
+   const updatedImages = db.prepare('SELECT id, image_url, position FROM product_images WHERE product_id=? ORDER BY position ASC').all(p.id)
+   s.json({success:true, image_url: updatedImages[0]?.image_url, images: updatedImages.map(i=>i.image_url), productImages: updatedImages})
   }catch(e){ s.status(500).json({error:e.message}) }
  })
 
- r.delete('/products/:handle',(q,s)=>{
-  try{
-   const p=db.prepare('SELECT id FROM products WHERE handle=?').get(q.params.handle)
-   if(!p) return s.status(404).json({error:'Not found'})
-   const delTx=db.transaction(()=>{
-     db.prepare('DELETE FROM variant_images WHERE variant_id IN (SELECT id FROM variants WHERE product_id=?)').run(p.id)
-     db.prepare('DELETE FROM variants WHERE product_id=?').run(p.id)
-     db.prepare('DELETE FROM product_images WHERE product_id=?').run(p.id)
-     db.prepare('DELETE FROM options WHERE product_id=?').run(p.id)
-     db.prepare('DELETE FROM products WHERE id=?').run(p.id)
-   })
-   delTx()
-   s.json({success:true})
-  }catch(e){
-   s.status(500).json({error:e.message})
-  }
- })
-
- r.put('/variants/:id/stock',(q,s)=>{
-  try{
-   const {qty}=q.body
-   if(qty==null) return s.status(400).json({error:'qty required'})
-   db.prepare('UPDATE variants SET inventory_quantity=? WHERE id=?').run(+qty,q.params.id)
-   s.json({success:true})
-  }catch(e){ s.status(500).json({error:e.message}) }
- })
-
-r.put('/images/:id', upload.single('image'), async (q,s)=>{
+ // Add image(s) to existing product
+ r.post('/products/:handle/images', upload.array('images', 10), async (q,s)=>{
    try{
-    let url=q.body.image_url
-    if(q.file){
-      url=await saveCompressedImage(q.file.buffer, q.file.originalname)
-    } else if(url){
-      url=normalizeImageUrl(url)
-    }
-    if(!url) return s.status(400).json({error:'image_url or image file required'})
-    db.prepare('UPDATE product_images SET image_url=? WHERE id=?').run(url,q.params.id)
-    s.json({success:true, url})
+     const p=db.prepare('SELECT id FROM products WHERE handle=?').get(q.params.handle)
+     if(!p) return s.status(404).json({error:'Product not found'})
+     
+     let newUrls = []
+     if (q.files && q.files.length > 0) {
+       const uploaded = await Promise.all(
+         q.files.map((file, idx) => saveCompressedProductImage(file.buffer, file.originalname, idx))
+       )
+       newUrls = uploaded.map(u => u.url)
+     } else if (q.body.image_url) {
+       newUrls = [normalizeImageUrl(q.body.image_url)]
+     } else if (q.body.images) {
+       const raw = Array.isArray(q.body.images) ? q.body.images : [q.body.images]
+       newUrls = raw.map(normalizeImageUrl).filter(Boolean)
+     }
+
+     if (newUrls.length === 0) return s.status(400).json({error:'No images provided'})
+
+     const maxPosRow = db.prepare('SELECT COALESCE(MAX(position), 0) as maxPos FROM product_images WHERE product_id=?').get(p.id)
+     let nextPos = (maxPosRow?.maxPos || 0) + 1
+
+     const tx = db.transaction(()=>{
+       newUrls.forEach(url => {
+         db.prepare('INSERT INTO product_images(product_id,image_url,position) VALUES(?,?,?)').run(p.id, url, nextPos++)
+       })
+     })
+     tx()
+
+     const allImages = db.prepare('SELECT id, image_url, position FROM product_images WHERE product_id=? ORDER BY position ASC, id ASC').all(p.id)
+     s.json({success: true, images: allImages.map(i=>i.image_url), productImages: allImages})
    }catch(e){ s.status(500).json({error:e.message}) }
-  })
+ })
+
+ // Delete specific image from product
+ r.delete('/products/:handle/images/:imageId', (q,s)=>{
+   try{
+     const p=db.prepare('SELECT id FROM products WHERE handle=?').get(q.params.handle)
+     if(!p) return s.status(404).json({error:'Product not found'})
+     db.prepare('DELETE FROM product_images WHERE id=? AND product_id=?').run(q.params.imageId, p.id)
+     const remaining = db.prepare('SELECT id, image_url, position FROM product_images WHERE product_id=? ORDER BY position ASC, id ASC').all(p.id)
+     s.json({success:true, images: remaining.map(i=>i.image_url), productImages: remaining})
+   }catch(e){ s.status(500).json({error:e.message}) }
+ })
+
+ r.delete('/images/:id', (q,s)=>{
+   try{
+     db.prepare('DELETE FROM product_images WHERE id=?').run(q.params.id)
+     s.json({success:true})
+   }catch(e){ s.status(500).json({error:e.message}) }
+ })
 
   // ORDERS - admin can view all orders
   r.get('/orders',(q,s)=>{

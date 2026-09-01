@@ -105,8 +105,8 @@ export default function Cart() {
   return (
     <div className="min-h-screen bg-white max-w-3xl mx-auto px-6 py-8 md:py-12">
       <div className="flex items-center justify-between mb-8 md:mb-12 animate-fade-in animate-slide-up-sm">
-        <h1 className="text-2xl md:text-3xl font-black tracking-tight">Cart</h1>
-        <Link to="/products" className="text-sm font-medium text-zinc-600 hover:text-black transition-colors flex items-center gap-1">
+        <h1 className="text-2xl md:text-3xl font-black tracking-tight uppercase">Shopping Bag</h1>
+        <Link to="/products" className="text-xs font-bold uppercase tracking-wider text-zinc-600 hover:text-black transition-colors flex items-center gap-1">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -116,10 +116,14 @@ export default function Cart() {
 
       {!items.length ? (
         <div className="text-center py-16 md:py-24 animate-fade-in animate-slide-up-sm">
-          <div className="text-5xl mb-4">&#128722;</div>
-          <h2 className="text-xl font-black mb-2">Your cart is empty</h2>
-          <p className="text-zinc-500 mb-8">Looks like you haven't added anything yet.</p>
-          <Link to="/products" className="btn-primary inline-block">Start Shopping</Link>
+          <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-4 text-zinc-700">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-black mb-2 uppercase tracking-wide">Your Shopping Bag is empty</h2>
+          <p className="text-zinc-500 mb-8 text-sm">Looks like you haven't added anything to your bag yet.</p>
+          <Link to="/products" className="btn-primary inline-block px-8 py-3 text-xs tracking-widest uppercase font-bold">Start Shopping</Link>
         </div>
       ) : (
         <>
@@ -207,8 +211,8 @@ export default function Cart() {
               <p className="text-[11px] text-zinc-400 text-center mt-3">
                 UPI &bull; Cards &bull; NetBanking &bull; Wallets &bull; Secured by Razorpay
               </p>
-              <button onClick={clear} className="w-full mt-3 btn-secondary">
-                Clear Cart
+              <button onClick={clear} className="w-full mt-3 btn-secondary text-xs uppercase font-bold tracking-wider">
+                Empty Bag
               </button>
             </div>
           </div>

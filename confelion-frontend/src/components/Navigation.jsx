@@ -1,19 +1,18 @@
 import {useState, useEffect, useRef} from "react"
-import { Link } from "react-router-dom"
-import {useNavigate, useLocation} from "react-router-dom"
-import {Icons} from "./Icons"
-import {useAuth} from "../lib/AuthContext"
+import { Link, useNavigate, useLocation } from "react-router-dom"
+import { Icons } from "./Icons"
+import { useAuth } from "../lib/AuthContext"
 
-function CartIcon({count = 0, size = 5}) {
+function BagButton({count = 0, size = 5}) {
   return (
     <Link
       to="/cart"
-      className="relative p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 transition-colors"
-      aria-label={`Cart${count > 0 ? ` (${count} items)` : ""}`}
+      className="relative p-2 rounded-full hover:bg-zinc-100 active:scale-95 transition-all duration-200"
+      aria-label={`Shopping Bag${count > 0 ? ` (${count} items)` : ""}`}
     >
-      <Icons.Cart className={`${size === 6 ? 'w-6 h-6' : 'w-5 h-5'} text-zinc-700`} />
+      <Icons.Bag className={`${size === 6 ? 'w-6 h-6' : 'w-5 h-5'} text-zinc-900`} />
       {count > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-black text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pop">
+        <span className="absolute top-0.5 right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 bg-black text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pop shadow-sm">
           {count > 9 ? "9+" : count}
         </span>
       )}
@@ -22,26 +21,25 @@ function CartIcon({count = 0, size = 5}) {
 }
 
 export default function Navigation() {
-  const [isMobile, setIsMobile] = useState(false)
   const [cartCount, setCartCount] = useState(0)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
+  const [showSearchModal, setShowSearchModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const navigate = useNavigate()
   const location = useLocation()
   const userMenuRef = useRef(null)
-  const {user, loading, signOut} = useAuth()
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
+  const searchInputRef = useRef(null)
+  const {user, signOut} = useAuth()
 
   useEffect(() => {
     const updateCart = () => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]")
-      setCartCount(cart.reduce((sum, item) => sum + (item.qty || 1), 0))
+      try {
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]")
+        setCartCount(cart.reduce((sum, item) => sum + (item.qty || 1), 0))
+      } catch {
+        setCartCount(0)
+      }
     }
     updateCart()
     window.addEventListener("storage", updateCart)
@@ -62,14 +60,30 @@ export default function Navigation() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (showSearchModal && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 50)
+    }
+  }, [showSearchModal])
+
   const handleLogout = async () => {
     await signOut()
+    setShowUserMenu(false)
     navigate("/")
   }
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      setShowSearchModal(false)
+      navigate(`/products?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery("")
+    }
+  }
+
   const navLinks = [
-    {href: "/", label: "Home", icon: <Icons.Home className="w-5 h-5" />},
-    {href: "/products", label: "Shop", icon: <Icons.Shop className="w-5 h-5" />},
+    {href: "/", label: "HOME", icon: <Icons.Home className="w-5 h-5" />},
+    {href: "/products", label: "SHOP", icon: <Icons.Shop className="w-5 h-5" />},
   ]
 
   const isActive = (href) => {
@@ -79,251 +93,315 @@ export default function Navigation() {
 
   return (
     <>
-      {/* Top Navbar - Desktop */}
-      <header className="hidden lg:flex items-center justify-between px-6 py-4 bg-white/90 backdrop-blur-md border-b border-zinc-100 sticky top-0 z-40 animate-slide-down">
-        <Link to="/" className="flex items-center shrink-0 hover:opacity-80 transition-opacity" aria-label="CONFELION Home">
-          <img
-            src="/images/applogo.svg"
-            alt="CONFELION"
-            className="h-9 md:h-10 w-auto object-contain block"
-          />
-        </Link>
-        <nav className="flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={`relative flex items-center gap-1.5 text-sm font-medium transition-all duration-200 ${
-                isActive(link.href)
-                  ? "text-black"
-                  : "text-zinc-600 hover:text-black"
-              }`}
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-100 transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          
+          {/* Left: Hamburger Menu Button */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowDrawer(true)}
+              className="p-2 -ml-2 rounded-lg text-zinc-900 hover:bg-zinc-100 active:scale-95 transition-all"
+              aria-label="Open menu"
             >
-              <span aria-hidden="true">{link.icon}</span>
-              <span>{link.label}</span>
-              {isActive(link.href) && (
-                <span className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-1 h-1 bg-black rounded-full animate-pulse" />
-              )}
-            </Link>
-          ))}
-
-          <CartIcon count={cartCount} size={5} />
-
-          {user ? (
-            <div className="relative ml-4" ref={userMenuRef}>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 transition-colors"
-                aria-label="Account menu"
-                aria-expanded={showUserMenu}
-                aria-haspopup="true"
-              >
-                <Icons.User className="w-5 h-5 text-zinc-700" />
-                <Icons.ChevronDown className="w-4 h-4 text-zinc-500" />
-              </button>
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-zinc-100 rounded-xl shadow-lg py-2 animate-fade-in animate-slide-up-sm z-50">
-                  <div className="px-4 py-2 border-b border-zinc-100">
-                    <p className="text-sm font-medium text-zinc-900 truncate">{user.user_metadata?.name || user.name || user.email?.split('@')[0]}</p>
-                    <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-                  </div>
-                  <Link
-                    to="/cart"
-                    className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-                    onClick={() => setShowUserMenu(false)}
-                  >
-                    <Icons.Cart className="w-5 h-5" />
-                    <span>Cart</span>
-                    {cartCount > 0 && <span className="ml-auto text-xs bg-black text-white px-2 py-0.5 rounded-full">{cartCount > 9 ? "9+" : cartCount}</span>}
-                  </Link>
-                  {(user.role === "admin" || user.user_metadata?.role === "admin") && (
-                    <Link
-                      to="/admin"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <Icons.Admin className="w-5 h-5" />
-                      <span>Admin Panel</span>
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-zinc-50 transition-colors"
-                  >
-                    <Icons.Logout className="w-5 h-5" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 ml-4">
-              <Link to="/login" className="text-sm font-medium text-zinc-600 hover:text-black transition-colors">
-                Login
-              </Link>
-              <Link to="/signup" className="btn-primary text-sm px-4 py-2">
-                Sign Up
-              </Link>
-            </div>
-          )}
-        </nav>
-      </header>
-
-      {/* Mobile Header */}
-      <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md border-b border-zinc-100 sticky top-0 z-40 animate-slide-down">
-        <Link to="/" className="flex items-center shrink-0 hover:opacity-80 transition-opacity" aria-label="CONFELION Home">
-          <img
-            src="/images/applogo.svg"
-            alt="CONFELION"
-            className="h-8 w-auto object-contain block"
-          />
-        </Link>
-        <div className="flex items-center gap-2">
-          <CartIcon count={cartCount} size={6} />
-          <button
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 transition-colors"
-            aria-label={showMobileMenu ? "Close menu" : "Open menu"}
-            aria-expanded={showMobileMenu}
-          >
-            {showMobileMenu ? <Icons.X className="w-6 h-6 text-zinc-700" /> : <Icons.Menu className="w-6 h-6 text-zinc-700" />}
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Menu Drawer */}
-      {showMobileMenu && (
-        <div className="lg:hidden fixed inset-0 z-50 animate-fade-in" onClick={() => setShowMobileMenu(false)}>
-          <div className="absolute inset-0 bg-black/50" />
-          <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl animate-slide-in-right">
-            <div className="p-4 border-b border-zinc-100 flex items-center justify-between">
-              <img src="/images/applogo.svg" alt="CONFELION" className="h-7 w-auto object-contain" />
-              <button
-                onClick={() => setShowMobileMenu(false)}
-                className="p-1 rounded-lg hover:bg-zinc-100 transition-colors"
-              >
-                <Icons.X className="w-6 h-6 text-zinc-700" />
-              </button>
-            </div>
-            <nav className="p-4 space-y-2">
+              <Icons.Menu className="w-6 h-6" />
+            </button>
+            
+            {/* Desktop Quick Nav Links */}
+            <nav className="hidden md:flex items-center gap-6 ml-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={`text-xs font-bold tracking-wider transition-colors ${
                     isActive(link.href)
-                      ? "bg-black/5 text-black"
-                      : "text-zinc-600 hover:bg-zinc-50"
+                      ? "text-black border-b-2 border-black pb-0.5"
+                      : "text-zinc-500 hover:text-black"
                   }`}
-                  onClick={() => setShowMobileMenu(false)}
                 >
-                  <span className="text-lg">{link.icon}</span>
-                  <span className="font-medium">{link.label}</span>
+                  {link.label}
                 </Link>
               ))}
+            </nav>
+          </div>
+
+          {/* Center: Brand Logo */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+            <Link to="/" className="hover:opacity-85 transition-opacity py-2" aria-label="CONFELION Home">
+              <img
+                src="/images/applogo.svg"
+                alt="CONFELION"
+                className="h-7 sm:h-8 md:h-9 w-auto object-contain block"
+                onError={(e) => {
+                  e.target.onerror = null
+                  e.target.src = "/applogo.png"
+                }}
+              />
+            </Link>
+          </div>
+
+          {/* Right: Search, Account, Bag */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={() => setShowSearchModal(true)}
+              className="p-2 rounded-full text-zinc-900 hover:bg-zinc-100 active:scale-95 transition-all"
+              aria-label="Search"
+            >
+              <Icons.Search className="w-5 h-5" />
+            </button>
+
+            {user ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="p-2 rounded-full text-zinc-900 hover:bg-zinc-100 active:scale-95 transition-all"
+                  aria-label="Account"
+                >
+                  <Icons.User className="w-5 h-5" />
+                </button>
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white border border-zinc-100 rounded-2xl shadow-xl py-2 animate-scale-in z-50">
+                    <div className="px-4 py-2.5 border-b border-zinc-100">
+                      <p className="text-xs font-bold text-zinc-900 truncate uppercase tracking-wide">
+                        {user.user_metadata?.name || user.name || user.email?.split('@')[0]}
+                      </p>
+                      <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
+                    </div>
+                    <Link
+                      to="/cart"
+                      className="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <Icons.Bag className="w-4 h-4" />
+                      <span>Shopping Bag</span>
+                      {cartCount > 0 && <span className="ml-auto text-[10px] bg-black text-white px-2 py-0.5 rounded-full font-bold">{cartCount}</span>}
+                    </Link>
+                    {(user.role === "admin" || user.user_metadata?.role === "admin") && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Icons.Admin className="w-4 h-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-zinc-50 transition-colors"
+                    >
+                      <Icons.Logout className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="p-2 rounded-full text-zinc-900 hover:bg-zinc-100 active:scale-95 transition-all"
+                aria-label="Login"
+              >
+                <Icons.User className="w-5 h-5" />
+              </Link>
+            )}
+
+            <BagButton count={cartCount} size={5} />
+          </div>
+        </div>
+      </header>
+
+      {/* Quick Search Modal */}
+      {showSearchModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 px-4 animate-fade-in" onClick={() => setShowSearchModal(false)}>
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 animate-scale-in" onClick={e => e.stopPropagation()}>
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <Icons.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search jeans, shirts, tees, jackets..."
+                className="w-full pl-12 pr-12 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSearchModal(false)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-zinc-400 hover:text-black hover:bg-zinc-100"
+              >
+                <Icons.X className="w-5 h-5" />
+              </button>
+            </form>
+            <div className="mt-4 flex items-center justify-between text-xs text-zinc-500">
+              <span>Popular: Wide Jeans, Linen Shirts, Boxy Tees</span>
+              <button
+                type="button"
+                onClick={() => { setShowSearchModal(false); navigate("/products"); }}
+                className="font-semibold text-black hover:underline"
+              >
+                View all items &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Side Menu Drawer */}
+      {showDrawer && (
+        <div className="fixed inset-0 z-50 animate-fade-in" onClick={() => setShowDrawer(false)}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" />
+          <div className="absolute left-0 top-0 h-full w-full max-w-xs bg-white shadow-2xl animate-slide-in-left flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+              <img src="/images/applogo.svg" alt="CONFELION" className="h-7 w-auto object-contain" />
+              <button
+                onClick={() => setShowDrawer(false)}
+                className="p-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
+                aria-label="Close menu"
+              >
+                <Icons.X className="w-6 h-6 text-zinc-700" />
+              </button>
+            </div>
+
+            <nav className="p-5 space-y-2 flex-1 overflow-y-auto">
+              <Link
+                to="/"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs tracking-wider transition-all ${
+                  isActive("/") ? "bg-black text-white" : "text-zinc-700 hover:bg-zinc-50"
+                }`}
+                onClick={() => setShowDrawer(false)}
+              >
+                <Icons.Home className="w-5 h-5" />
+                <span>HOME</span>
+              </Link>
+              <Link
+                to="/products"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs tracking-wider transition-all ${
+                  isActive("/products") ? "bg-black text-white" : "text-zinc-700 hover:bg-zinc-50"
+                }`}
+                onClick={() => setShowDrawer(false)}
+              >
+                <Icons.Shop className="w-5 h-5" />
+                <span>ALL PRODUCTS</span>
+              </Link>
               <Link
                 to="/cart"
-                className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive("/cart")
-                    ? "bg-black/5 text-black"
-                    : "text-zinc-600 hover:bg-zinc-50"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs tracking-wider transition-all ${
+                  isActive("/cart") ? "bg-black text-white" : "text-zinc-700 hover:bg-zinc-50"
                 }`}
-                onClick={() => setShowMobileMenu(false)}
+                onClick={() => setShowDrawer(false)}
               >
-                <Icons.Cart className="w-6 h-6" />
-                <span className="font-medium">Cart</span>
+                <Icons.Bag className="w-5 h-5" />
+                <span>SHOPPING BAG</span>
                 {cartCount > 0 && (
-                  <span className="ml-auto w-5 h-5 bg-black text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pop">
+                  <span className="ml-auto w-5 h-5 bg-black text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </Link>
+
               {user ? (
                 <>
                   {(user.role === "admin" || user.user_metadata?.role === "admin") && (
                     <Link
                       to="/admin"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-zinc-600 hover:bg-zinc-50`}
-                      onClick={() => setShowMobileMenu(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs tracking-wider text-zinc-700 hover:bg-zinc-50"
+                      onClick={() => setShowDrawer(false)}
                     >
-                      <Icons.Admin className="w-6 h-6" />
-                      <span className="font-medium">Admin Panel</span>
+                      <Icons.Admin className="w-5 h-5" />
+                      <span>ADMIN PANEL</span>
                     </Link>
                   )}
                   <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 hover:bg-zinc-50 transition-colors font-medium"
+                    onClick={() => { handleLogout(); setShowDrawer(false); }}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl font-bold text-xs tracking-wider text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    <Icons.Logout className="w-6 h-6" />
-                    <span>Logout</span>
+                    <Icons.Logout className="w-5 h-5" />
+                    <span>LOGOUT</span>
                   </button>
-                  <div className="pt-2 border-t border-zinc-100">
-                    <p className="px-4 py-2 text-xs text-zinc-500 capitalize">{user.user_metadata?.name || user.name || user.email?.split('@')[0]}</p>
-                  </div>
                 </>
               ) : (
-                <div className="pt-4 border-t border-zinc-100 space-y-2">
-                  <Link
-                    to="/login"
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-black text-white text-center font-medium transition-colors hover:bg-zinc-900"
-                    onClick={() => setShowMobileMenu(false)}
-                  >
-                    <Icons.User className="w-5 h-5" />
-                    <span>Login / Sign Up</span>
-                  </Link>
-                </div>
+                <Link
+                  to="/login"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs tracking-wider bg-black text-white text-center mt-4"
+                  onClick={() => setShowDrawer(false)}
+                >
+                  <Icons.User className="w-5 h-5" />
+                  <span>LOGIN / SIGN UP</span>
+                </Link>
               )}
             </nav>
+            <div className="p-5 border-t border-zinc-100 text-center text-[11px] text-zinc-400">
+              CONFELION • STREETWEAR &amp; APPAREL
+            </div>
           </div>
         </div>
       )}
 
       {/* Bottom Dock - Mobile */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 animate-slide-up">
-        <div className="bg-white/95 backdrop-blur-md border-t border-zinc-100 px-2 py-2 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40">
+        <div className="bg-white/95 backdrop-blur-md border-t border-zinc-100 px-3 py-1.5 safe-area-bottom shadow-lg">
           <div className="flex items-center justify-around max-w-md mx-auto">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
-                className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${
                   isActive(link.href)
-                    ? "bg-black/5 text-black"
-                    : "text-zinc-500 active:bg-zinc-100"
+                    ? "text-black"
+                    : "text-zinc-400 active:bg-zinc-100"
                 }`}
-                onClick={() => navigate(link.href)}
               >
-                <span className="text-lg" aria-hidden="true">{link.icon}</span>
-                <span className="text-[11px] font-medium">{link.label}</span>
+                <span aria-hidden="true">{link.icon}</span>
+                <span className="text-[10px] font-bold tracking-wider">{link.label}</span>
               </Link>
             ))}
-            <CartIcon count={cartCount} size={6} />
+            
+            <button
+              onClick={() => setShowSearchModal(true)}
+              className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-zinc-400 active:bg-zinc-100 transition-all"
+            >
+              <Icons.Search className="w-5 h-5" />
+              <span className="text-[10px] font-bold tracking-wider">SEARCH</span>
+            </button>
+
+            <Link
+              to="/cart"
+              className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${
+                isActive("/cart") ? "text-black" : "text-zinc-400 active:bg-zinc-100"
+              }`}
+            >
+              <div className="relative">
+                <Icons.Bag className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[0.9rem] h-[0.9rem] px-0.5 bg-black text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pop">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-bold tracking-wider">BAG</span>
+            </Link>
+
             {(user?.role === "admin" || user?.user_metadata?.role === "admin") ? (
               <Link
                 to="/admin"
-                className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-all duration-200 text-zinc-500 active:bg-zinc-100`}
-                onClick={() => navigate("/admin")}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${isActive("/admin") ? "text-black" : "text-zinc-400"}`}
               >
-                <Icons.Admin className="w-6 h-6" />
-                <span className="text-[11px] font-medium">Admin</span>
+                <Icons.Admin className="w-5 h-5" />
+                <span className="text-[10px] font-bold tracking-wider">ADMIN</span>
               </Link>
             ) : !user ? (
               <Link
                 to="/login"
-                className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-all duration-200 text-zinc-500 active:bg-zinc-100`}
-                onClick={() => navigate("/login")}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 ${isActive("/login") ? "text-black" : "text-zinc-400"}`}
               >
-                <Icons.User className="w-6 h-6" />
-                <span className="text-[11px] font-medium">Account</span>
+                <Icons.User className="w-5 h-5" />
+                <span className="text-[10px] font-bold tracking-wider">ACCOUNT</span>
               </Link>
             ) : null}
           </div>
         </div>
       </nav>
-
-      {/* Mobile safe area spacer */}
-      <div className="lg:hidden h-16" />
-
     </>
   )
 }

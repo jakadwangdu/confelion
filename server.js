@@ -42,7 +42,7 @@ app.get('/api/settings', (req, res) => {
     const rows = db.prepare('SELECT key, value FROM settings').all()
     const settings = {}
     rows.forEach(r => settings[r.key] = r.value)
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+    res.set('Cache-Control', 'no-cache, must-revalidate')
     res.json(settings)
   } catch (e) {
     res.status(500).json({error: e.message})

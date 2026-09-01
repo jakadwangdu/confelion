@@ -78,5 +78,6 @@ try{db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)").run("foo
 try{db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)").run("footer_twitter","")}catch{}
 try{db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)").run("featured_products","")}catch{}
 try{db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)").run("new_arrivals_count","8")}catch{}
+try{db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)").run("size_chart_image","")}catch{}
 console.log('DB ready')}
 exports.getDb=()=>{if(!db)throw Error('DB not init');return db}

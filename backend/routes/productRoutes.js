@@ -52,7 +52,7 @@ r.get('/',(q,s)=>{
 
     const rows = db.prepare(`
       SELECT p.*,
-        (SELECT image_url FROM product_images WHERE product_id=p.id LIMIT 1) as image_url,
+        (SELECT image_url FROM product_images WHERE product_id=p.id ORDER BY position ASC, id ASC LIMIT 1) as image_url,
         (SELECT price FROM variants WHERE product_id=p.id LIMIT 1) as price,
         (SELECT compare_at_price FROM variants WHERE product_id=p.id LIMIT 1) as compare_at_price
       FROM products p

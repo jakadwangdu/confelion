@@ -15,9 +15,16 @@ export default function Admin() {
   const [revenue, setRevenue] = useState(null)
   const [revenuePeriod, setRevenuePeriod] = useState('month')
   const [settings, setSettings] = useState({})
-  const [f, setF] = useState({handle: "", title: "", price: "", qty: "10", size: "S,M,L,XL", image_url: ""})
+  const [f, setF] = useState({handle: "", title: "", price: "", qty: "10", size: "S,M,L,XL", image_url: "", images: []})
   const [edit, setEdit] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState("")
+  const [heroUploading, setHeroUploading] = useState(false)
+  const [heroStats, setHeroStats] = useState(null)
+  const [sizeChartUploading, setSizeChartUploading] = useState(false)
+  const [sizeChartStats, setSizeChartStats] = useState(null)
+  const [urlInput, setUrlInput] = useState("")
+  const [editUrlInput, setEditUrlInput] = useState("")
   const [preview, setPreview] = useState("")
 
   const getAuthToken = () => {
@@ -78,43 +85,156 @@ export default function Admin() {
     fetchRevenue(revenuePeriod)
   }, [revenuePeriod])
 
-  const handleFile = async (e, targetSetter) => {
+  // Upload hero banner with Sharp WebP image compression & instant live event
+  const handleHeroFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith("image/")) return alert("Only images allowed")
-    if (file.size > 5 * 1024 * 1024) return alert("Max 5MB")
-    setUploading(true)
+    if (!file.type.startsWith("image/")) return alert("Only image files are allowed")
+    setHeroUploading(true)
+    setHeroStats(null)
     try {
       const fd = new FormData()
       fd.append("image", file)
-      const res = await fetch("/api/admin/upload", {method: "POST", headers: hdr(), body: fd})
+      const res = await fetch("/api/admin/upload-hero", {method: "POST", headers: hdr(), body: fd})
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      if (data.url) {
-        targetSetter(prev => ({...prev, image_url: data.url}))
-        setPreview(data.url)
-        if (targetSetter === setF) setF(p => ({...p, image_url: data.url}))
-        if (targetSetter === setEdit) setEdit(p => ({...p, image_url: data.url}))
-      }
+      setSettings(prev => ({...prev, hero_image: data.url}))
+      setHeroStats(data)
+      // Instant live crossfade notification for frontend
+      window.dispatchEvent(new CustomEvent("hero-updated", {detail: {hero_image: data.url}}))
+      window.dispatchEvent(new CustomEvent("settings-updated", {detail: {...settings, hero_image: data.url}}))
+      alert(`Hero banner compressed & updated successfully! Saved ${data.savingsPercent}% (${(file.size / 1024).toFixed(0)}KB → ${(data.compressedSize / 1024).toFixed(0)}KB WebP)`)
     } catch (err) {
-      alert("Upload failed: " + err.message)
+      alert("Hero upload failed: " + err.message)
     } finally {
-      setUploading(false)
+      setHeroUploading(false)
       e.target.value = ""
     }
   }
 
+  // Upload Size Chart image with auto-compression
+  const handleSizeChartFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/")) return alert("Only image files are allowed")
+    setSizeChartUploading(true)
+    setSizeChartStats(null)
+    try {
+      const fd = new FormData()
+      fd.append("image", file)
+      const res = await fetch("/api/admin/upload-size-chart", {method: "POST", headers: hdr(), body: fd})
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setSettings(prev => ({...prev, size_chart_image: data.url}))
+      setSizeChartStats(data)
+      window.dispatchEvent(new CustomEvent("settings-updated", {detail: {...settings, size_chart_image: data.url}}))
+      alert(`Size chart image uploaded & compressed successfully! (${(file.size / 1024).toFixed(0)}KB → ${(data.compressedSize / 1024).toFixed(0)}KB WebP)`)
+    } catch (err) {
+      alert("Size chart upload failed: " + err.message)
+    } finally {
+      setSizeChartUploading(false)
+      e.target.value = ""
+    }
+  }
+
+  // Upload multiple product images with Sharp WebP image compression (4-5+ images)
+  const handleMultipleProductImages = async (e, targetSetter) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    const invalid = files.find(f => !f.type.startsWith("image/"))
+    if (invalid) return alert("Only image files are allowed")
+    
+    setUploading(true)
+    setUploadProgress(`Compressing ${files.length} image(s)...`)
+    try {
+      const fd = new FormData()
+      files.forEach(f => fd.append("images", f))
+      const res = await fetch("/api/admin/upload-multiple", {method: "POST", headers: hdr(), body: fd})
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      
+      if (data.urls && data.urls.length > 0) {
+        targetSetter(prev => {
+          const currentImages = prev.images || (prev.image_url ? [prev.image_url] : [])
+          const combined = [...currentImages, ...data.urls]
+          return {
+            ...prev,
+            images: combined,
+            image_url: prev.image_url || combined[0]
+          }
+        })
+        const totalOriginal = data.images.reduce((sum, img) => sum + (img.originalSize || 0), 0)
+        const totalCompressed = data.images.reduce((sum, img) => sum + (img.compressedSize || 0), 0)
+        const totalSavings = totalOriginal > 0 ? Math.round((1 - totalCompressed / totalOriginal) * 100) : 0
+        alert(`Successfully compressed & added ${data.urls.length} images! (Saved ${totalSavings}% bandwidth)`)
+      }
+    } catch (err) {
+      alert("Image upload failed: " + err.message)
+    } finally {
+      setUploading(false)
+      setUploadProgress("")
+      e.target.value = ""
+    }
+  }
+
+  const removeImageFromList = (index, targetSetter) => {
+    targetSetter(prev => {
+      const updated = (prev.images || []).filter((_, i) => i !== index)
+      return {
+        ...prev,
+        images: updated,
+        image_url: updated[0] || ""
+      }
+    })
+  }
+
+  const setAsPrimaryImage = (index, targetSetter) => {
+    targetSetter(prev => {
+      const list = [...(prev.images || [])]
+      const [selected] = list.splice(index, 1)
+      const updated = [selected, ...list]
+      return {
+        ...prev,
+        images: updated,
+        image_url: selected
+      }
+    })
+  }
+
+  const addImageUrlToList = (urlVal, setInput, targetSetter) => {
+    const trimmed = urlVal?.trim()
+    if (!trimmed) return
+    targetSetter(prev => {
+      const current = prev.images || (prev.image_url ? [prev.image_url] : [])
+      const updated = [...current, trimmed]
+      return {
+        ...prev,
+        images: updated,
+        image_url: prev.image_url || updated[0]
+      }
+    })
+    setInput("")
+  }
+
   const add = async e => {
     e.preventDefault()
+    if (!f.handle || !f.title) return alert("Handle and Title are required")
+    const imagesList = f.images && f.images.length > 0 ? f.images : (f.image_url ? [f.image_url] : [])
+    const payload = {
+      ...f,
+      images: imagesList,
+      image_url: imagesList[0] || ""
+    }
     const r = await fetch("/api/admin/products", {
       method: "POST",
       headers: {...hdr(), "Content-Type": "application/json"},
-      body: JSON.stringify(f)
+      body: JSON.stringify(payload)
     }).then(r => r.json())
     if (r.error) return alert(r.error)
-    alert("Product added")
-    setF({handle: "", title: "", price: "", qty: "10", size: "S,M,L,XL", image_url: ""})
+    alert("Product created with " + imagesList.length + " compressed image(s)!")
+    setF({handle: "", title: "", price: "", qty: "10", size: "S,M,L,XL", image_url: "", images: []})
     refreshProducts()
+    setTab("products")
   }
 
   const del = async h => {
@@ -148,13 +268,19 @@ export default function Admin() {
 
   const updProd = async e => {
     e.preventDefault()
+    const imagesList = edit.images && edit.images.length > 0 ? edit.images : (edit.image_url ? [edit.image_url] : [])
+    const payload = {
+      ...edit,
+      images: imagesList,
+      image_url: imagesList[0] || ""
+    }
     const r = await fetch("/api/admin/products/" + edit.handle, {
       method: "PUT",
       headers: {...hdr(), "Content-Type": "application/json"},
-      body: JSON.stringify(edit)
+      body: JSON.stringify(payload)
     }).then(r => r.json())
     if (r.error) return alert(r.error)
-    alert("Updated")
+    alert("Product updated successfully!")
     setEdit(null)
     refreshProducts()
   }
@@ -633,7 +759,7 @@ export default function Admin() {
                 icon={<Icons.Image className="w-5 h-5 text-blue-700" />}
                 iconBg="bg-blue-50"
                 title="Hero Section"
-                subtitle="Customize the homepage hero banner"
+                subtitle="Upload & customize the homepage hero banner with auto-compressor"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -655,11 +781,138 @@ export default function Admin() {
                     <input value={settings.hero_button_link || ""} onChange={e => setSettings({...settings, hero_button_link: e.target.value})} placeholder="/products" className="input" />
                   </div>
                   <div>
-                    <label className="label">Hero Image URL</label>
+                    <label className="label">Hero Image URL (or upload file below)</label>
                     <input value={settings.hero_image || ""} onChange={e => setSettings({...settings, hero_image: e.target.value})} placeholder="/images/hero-banner.jpg" className="input" />
                   </div>
                 </div>
-                {settings.hero_image && <img src={settings.hero_image} alt="Hero preview" className="mt-2 w-full h-32 object-cover rounded-lg border" />}
+
+                {/* Hero Image File Upload & Compressor */}
+                <div className="p-4 bg-white rounded-xl border-2 border-dashed border-zinc-200 hover:border-zinc-400 transition-colors">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
+                        <Icons.Image className="w-4 h-4 text-blue-600" />
+                        Upload Hero Image from Files
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Image will be automatically compressed to high-res WebP to reduce server load and load faster on mobile.
+                      </p>
+                    </div>
+                    <label className={`btn-primary px-4 py-2 text-xs cursor-pointer shrink-0 ${heroUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      <span>{heroUploading ? "Compressing & Uploading..." : "Choose Image File"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleHeroFileUpload}
+                        className="hidden"
+                        disabled={heroUploading}
+                      />
+                    </label>
+                  </div>
+
+                  {heroUploading && (
+                    <div className="mt-3 p-3 bg-blue-50 text-blue-800 rounded-lg text-xs flex items-center gap-2 animate-pulse-soft">
+                      <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      Compressing hero banner with Sharp image engine (WebP max 1920px, high performance)...
+                    </div>
+                  )}
+
+                  {heroStats && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-xs flex items-center justify-between">
+                      <span>✓ <strong>Compressed successfully!</strong> {(heroStats.originalSize / 1024).toFixed(0)}KB → {(heroStats.compressedSize / 1024).toFixed(0)}KB WebP ({heroStats.savingsPercent}% server load reduced)</span>
+                      <span className="font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full text-[10px]">Saved</span>
+                    </div>
+                  )}
+
+                  {settings.hero_image && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold text-zinc-600 mb-1.5">Active Hero Banner Preview:</p>
+                      <div className="relative rounded-xl overflow-hidden border border-zinc-200 aspect-[16/9] max-h-48 bg-zinc-900">
+                        <img src={settings.hero_image} alt="Hero preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-4">
+                          <p className="text-white font-bold text-sm truncate">{settings.hero_headline || "Less is more."}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </SettingsSection>
+
+              {/* Size Chart Settings */}
+              <SettingsSection
+                icon={<Icons.Ruler className="w-5 h-5 text-indigo-700" />}
+                iconBg="bg-indigo-50"
+                title="Size Chart Management"
+                subtitle="Upload size chart photo for product pages or paste an image URL"
+              >
+                <div>
+                  <label className="label">Size Chart Image URL (or upload image below)</label>
+                  <input
+                    value={settings.size_chart_image || ""}
+                    onChange={e => setSettings({...settings, size_chart_image: e.target.value})}
+                    placeholder="/uploads/size_chart.webp or https://..."
+                    className="input"
+                  />
+                </div>
+
+                <div className="p-4 bg-white rounded-xl border-2 border-dashed border-zinc-200 hover:border-zinc-400 transition-colors">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
+                        <Icons.Ruler className="w-4 h-4 text-indigo-600" />
+                        Upload Size Chart Image File
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Automatically compressed to high-clarity WebP. Displayed when customers click "SIZE CHART" on any product page.
+                      </p>
+                    </div>
+                    <label className={`btn-primary px-4 py-2 text-xs cursor-pointer shrink-0 ${sizeChartUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      <span>{sizeChartUploading ? "Uploading & Compressing..." : "Choose Size Chart File"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSizeChartFileUpload}
+                        className="hidden"
+                        disabled={sizeChartUploading}
+                      />
+                    </label>
+                  </div>
+
+                  {sizeChartUploading && (
+                    <div className="mt-3 p-3 bg-indigo-50 text-indigo-800 rounded-lg text-xs flex items-center gap-2 animate-pulse-soft">
+                      <div className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                      Optimizing size chart image...
+                    </div>
+                  )}
+
+                  {sizeChartStats && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-xs flex items-center justify-between">
+                      <span>✓ <strong>Size chart updated!</strong> (Compressed to {(sizeChartStats.compressedSize / 1024).toFixed(0)}KB WebP)</span>
+                      <span className="font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full text-[10px]">Saved</span>
+                    </div>
+                  )}
+
+                  {settings.size_chart_image && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-semibold text-zinc-600">Active Size Chart Preview:</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSettings({...settings, size_chart_image: ""})
+                            window.dispatchEvent(new CustomEvent("settings-updated", {detail: {...settings, size_chart_image: ""}}))
+                          }}
+                          className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                        >
+                          Remove Image
+                        </button>
+                      </div>
+                      <div className="relative rounded-xl overflow-hidden border border-zinc-200 bg-zinc-50 p-2 max-h-64 flex items-center justify-center">
+                        <img src={settings.size_chart_image} alt="Size chart preview" className="max-h-56 w-auto object-contain rounded-lg shadow-sm" />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </SettingsSection>
 
               {/* Announcement Bar Settings */}
@@ -798,42 +1051,140 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {prods.map(p => (
-                    <tr key={p.id} className="border-t border-zinc-100 hover:bg-zinc-50 transition-colors">
-                      <td className="p-4 font-mono text-xs text-zinc-700">{p.handle}</td>
-                      <td className="p-4 font-medium">{p.title}</td>
-                      <td className="p-4 text-zinc-700">₹{p.price || "-"}</td>
-                      <td className="p-4"><StockCell p={p} onSave={updStock} /></td>
-                      <td className="p-4">
-                        {p.image_url ? <img src={p.image_url} alt="" className="w-12 h-12 object-cover rounded-lg border" /> : <span className="text-xs text-zinc-400 px-2 py-1 bg-zinc-50 rounded">AI</span>}
-                      </td>
-                      <td className="p-4 flex gap-2">
-                        <button onClick={() => setEdit({...p, price: p.price || "", qty: p.qty || 10, size: "", image_url: p.image_url || ""})} className="text-xs font-medium text-zinc-600 hover:text-black transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-100">Edit</button>
-                        <button onClick={() => del(p.handle)} className="text-xs font-medium text-red-600 hover:text-red-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
-                        <button onClick={() => updImg(p.handle)} className="text-xs font-medium text-zinc-600 hover:text-black transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-100">Image</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {prods.map(p => {
+                    const prodImages = p.images && p.images.length > 0 ? p.images : (p.image_url ? [p.image_url] : [])
+                    return (
+                      <tr key={p.id} className="border-t border-zinc-100 hover:bg-zinc-50 transition-colors">
+                        <td className="p-4 font-mono text-xs text-zinc-700">{p.handle}</td>
+                        <td className="p-4 font-medium">{p.title}</td>
+                        <td className="p-4 text-zinc-700">₹{p.price || "-"}</td>
+                        <td className="p-4"><StockCell p={p} onSave={updStock} /></td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            {p.image_url ? (
+                              <div className="relative">
+                                <img src={p.image_url} alt="" className="w-12 h-14 object-cover rounded-lg border" />
+                                {prodImages.length > 1 && (
+                                  <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full shadow">
+                                    {prodImages.length}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-zinc-400 px-2 py-1 bg-zinc-50 rounded">AI</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 flex gap-2">
+                          <button
+                            onClick={() => setEdit({
+                              ...p,
+                              price: p.price || "",
+                              qty: p.qty || 10,
+                              size: "",
+                              image_url: p.image_url || "",
+                              images: prodImages
+                            })}
+                            className="text-xs font-medium text-zinc-600 hover:text-black transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-100"
+                          >
+                            Edit
+                          </button>
+                          <button onClick={() => del(p.handle)} className="text-xs font-medium text-red-600 hover:text-red-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
             {edit && (
-              <form onSubmit={updProd} className="border-t border-zinc-100 bg-zinc-50 p-6 animate-fade-in animate-slide-up-sm">
+              <form onSubmit={updProd} className="border-t border-zinc-100 bg-zinc-50 p-6 md:p-8 animate-fade-in animate-slide-up-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-black text-lg text-zinc-900">Editing Product: {edit.title || edit.handle}</h3>
+                  <button type="button" onClick={() => setEdit(null)} className="p-1 rounded-lg hover:bg-zinc-200">
+                    <Icons.X className="w-5 h-5 text-zinc-500" />
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><label className="label">Title</label><input value={edit.title || ""} onChange={e => setEdit({...edit, title: e.target.value})} placeholder="Title" className="input" /></div>
                   <div><label className="label">Price (₹)</label><input value={edit.price || ""} onChange={e => setEdit({...edit, price: e.target.value})} placeholder="Price" className="input" /></div>
                   <div><label className="label">Qty</label><input value={edit.qty || ""} onChange={e => setEdit({...edit, qty: e.target.value})} placeholder="Qty" className="input" /></div>
                   <div><label className="label">Sizes (S,M,L,XL)</label><input value={edit.size || ""} onChange={e => setEdit({...edit, size: e.target.value})} placeholder="Sizes S,M,L" className="input" /></div>
                 </div>
-                <div className="mb-4"><label className="label">Image URL</label><input value={edit.image_url || ""} onChange={e => setEdit({...edit, image_url: e.target.value})} placeholder="Image URL" className="input" /></div>
-                <div className="mb-4">
-                  <label className="label">Upload image</label>
-                  <input type="file" accept="image/*" onChange={e => handleFile(e, setEdit)} className="w-full text-sm border border-zinc-200 rounded-lg p-2 bg-zinc-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-black file:text-white file:text-sm hover:file:bg-zinc-900 transition-colors cursor-pointer" disabled={uploading} />
-                  {uploading && <p className="text-xs text-amber-600 mt-1 animate-pulse-soft">Compressing & uploading...</p>}
-                  {edit.image_url && <img src={edit.image_url} alt="preview" className="mt-2 w-24 h-30 object-cover rounded-lg border" />}
+
+                {/* Multi-Image Gallery Editor for Product */}
+                <div className="mb-6 p-4 bg-white rounded-xl border border-zinc-200">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-900">Product Images Gallery ({edit.images?.length || 0} images)</p>
+                      <p className="text-xs text-zinc-500">Upload 4-5 compressed images. First image is the main/primary product photo.</p>
+                    </div>
+                    <label className={`btn-primary px-3 py-1.5 text-xs cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                      <span>{uploading ? uploadProgress || "Compressing..." : "+ Upload More Images"}</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={e => handleMultipleProductImages(e, setEdit)}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Existing Images Thumbnails */}
+                  {edit.images && edit.images.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mt-3">
+                      {edit.images.map((imgUrl, idx) => (
+                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-zinc-200 bg-zinc-50 aspect-[3/4]">
+                          <img src={imgUrl} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                          <span className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm ${idx === 0 ? "bg-black text-white" : "bg-white/90 text-zinc-800"}`}>
+                            {idx === 0 ? "★ Main" : `#${idx + 1}`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeImageFromList(idx, setEdit)}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity shadow"
+                            title="Remove image"
+                          >
+                            <Icons.X className="w-3.5 h-3.5" />
+                          </button>
+                          {idx !== 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setAsPrimaryImage(idx, setEdit)}
+                              className="absolute bottom-1.5 left-1.5 right-1.5 py-1 text-[10px] font-bold bg-black/80 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity text-center hover:bg-black"
+                            >
+                              Make Main
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-400 py-4 text-center">No images uploaded yet. Upload 4-5 images above.</p>
+                  )}
+
+                  {/* Add Image by URL */}
+                  <div className="flex gap-2 mt-4 pt-3 border-t border-zinc-100">
+                    <input
+                      value={editUrlInput}
+                      onChange={e => setEditUrlInput(e.target.value)}
+                      placeholder="Or paste an image URL to add..."
+                      className="input text-xs flex-1 py-1.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addImageUrlToList(editUrlInput, setEditUrlInput, setEdit)}
+                      className="btn-secondary text-xs px-3 py-1.5 whitespace-nowrap"
+                    >
+                      Add URL
+                    </button>
+                  </div>
                 </div>
+
                 <div className="flex gap-3">
-                  <button type="submit" className="btn-primary px-6" disabled={uploading}>{uploading ? "Saving..." : "Update"}</button>
+                  <button type="submit" className="btn-primary px-6" disabled={uploading}>{uploading ? "Saving..." : "Save Product Changes"}</button>
                   <button type="button" onClick={() => setEdit(null)} className="btn-secondary px-6">Cancel</button>
                 </div>
               </form>
@@ -842,22 +1193,102 @@ export default function Admin() {
         )}
 
         {tab === "add" && (
-          <form onSubmit={add} className="bg-white border border-zinc-100 rounded-2xl p-6 md:p-8 max-w-2xl animate-fade-in animate-slide-up-sm" style={{animationDelay: "200ms"}}>
+          <form onSubmit={add} className="bg-white border border-zinc-100 rounded-2xl p-6 md:p-8 max-w-3xl animate-fade-in animate-slide-up-sm" style={{animationDelay: "200ms"}}>
+            <h3 className="font-black text-xl mb-6">Add New Product</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div><label className="label">Handle <span className="text-red-500">*</span></label><input placeholder="Handle (e.g. my-tee-black)" value={f.handle} onChange={e => setF({...f, handle: e.target.value})} className="input" required /></div>
-              <div><label className="label">Title <span className="text-red-500">*</span></label><input placeholder="Title" value={f.title} onChange={e => setF({...f, title: e.target.value})} className="input" required /></div>
+              <div><label className="label">Handle <span className="text-red-500">*</span></label><input placeholder="Handle (e.g. relaxed-linen-shirt)" value={f.handle} onChange={e => setF({...f, handle: e.target.value})} className="input" required /></div>
+              <div><label className="label">Title <span className="text-red-500">*</span></label><input placeholder="Title (e.g. Relaxed Linen Shirt)" value={f.title} onChange={e => setF({...f, title: e.target.value})} className="input" required /></div>
               <div><label className="label">Price (₹) <span className="text-red-500">*</span></label><input placeholder="Price (₹)" value={f.price} onChange={e => setF({...f, price: e.target.value})} className="input" required /></div>
               <div><label className="label">Stock Qty</label><input placeholder="Stock Qty" value={f.qty} onChange={e => setF({...f, qty: e.target.value})} className="input" /></div>
             </div>
             <div className="mb-6"><label className="label">Sizes (S,M,L,XL)</label><input placeholder="Sizes (S,M,L,XL)" value={f.size} onChange={e => setF({...f, size: e.target.value})} className="input" /></div>
-            <div className="mb-6">
-              <label className="label">Product Image</label>
-              <input type="file" accept="image/*" onChange={e => handleFile(e, setF)} className="w-full text-sm border border-zinc-200 rounded-lg p-2 bg-zinc-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-black file:text-white file:text-sm hover:file:bg-zinc-900 transition-colors cursor-pointer" disabled={uploading} />
-              {uploading && <p className="text-xs text-amber-600 mt-1 animate-pulse-soft">Uploading & compressing...</p>}
-              <input placeholder="Or paste Image URL" value={f.image_url} onChange={e => setF({...f, image_url: e.target.value})} className="input mt-2" />
-              {f.image_url && <img src={f.image_url} alt="preview" className="mt-2 w-32 h-40 object-cover rounded-lg border" />}
+
+            {/* Product Images Uploader - 4 to 5 compressed images */}
+            <div className="mb-6 p-5 bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
+                    <Icons.Image className="w-4 h-4 text-emerald-600" />
+                    Product Images (Upload 4-5 Compressed Images)
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Select 4-5 images from your computer. Sharp compressor automatically optimizes them to lightweight WebP.
+                  </p>
+                </div>
+                <label className={`btn-primary px-4 py-2 text-xs cursor-pointer shrink-0 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                  <span>{uploading ? uploadProgress || "Compressing..." : "Choose 4-5 Images"}</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={e => handleMultipleProductImages(e, setF)}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+              </div>
+
+              {uploading && (
+                <div className="my-3 p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs flex items-center gap-2 animate-pulse-soft">
+                  <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                  Compressing images with Sharp (1000x1250 WebP, high quality & small file size)...
+                </div>
+              )}
+
+              {/* Uploaded Images Thumbnails Grid */}
+              {f.images && f.images.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mt-4">
+                  {f.images.map((imgUrl, idx) => (
+                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-zinc-200 bg-white aspect-[3/4] shadow-sm">
+                      <img src={imgUrl} alt={`Product preview ${idx + 1}`} className="w-full h-full object-cover" />
+                      <span className={`absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm ${idx === 0 ? "bg-black text-white" : "bg-white/90 text-zinc-800"}`}>
+                        {idx === 0 ? "★ Main" : `#${idx + 1}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeImageFromList(idx, setF)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity shadow"
+                        title="Remove image"
+                      >
+                        <Icons.X className="w-3.5 h-3.5" />
+                      </button>
+                      {idx !== 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setAsPrimaryImage(idx, setF)}
+                          className="absolute bottom-1.5 left-1.5 right-1.5 py-1 text-[10px] font-bold bg-black/80 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity text-center hover:bg-black"
+                        >
+                          Make Main
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-zinc-400">
+                  <p className="text-xs">No images uploaded yet. Click "Choose 4-5 Images" to upload files.</p>
+                </div>
+              )}
+
+              {/* Paste URL Option */}
+              <div className="flex gap-2 mt-4 pt-3 border-t border-zinc-200">
+                <input
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                  placeholder="Or paste image URL (e.g. from CDN)..."
+                  className="input text-xs flex-1 py-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => addImageUrlToList(urlInput, setUrlInput, setF)}
+                  className="btn-secondary text-xs px-4 py-2 whitespace-nowrap"
+                >
+                  Add URL
+                </button>
+              </div>
             </div>
-            <button type="submit" className="w-full btn-primary py-3 text-sm tracking-wide" disabled={uploading}>{uploading ? "Uploading..." : "ADD PRODUCT"}</button>
+
+            <button type="submit" className="w-full btn-primary py-3.5 text-sm tracking-wide" disabled={uploading}>{uploading ? "Compressing & Uploading..." : "CREATE PRODUCT"}</button>
           </form>
         )}
 

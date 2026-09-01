@@ -1,6 +1,5 @@
 import {useEffect, useState, useRef} from "react"
 import Hero from "../components/Hero"
-import CollectionStrip from "../components/CollectionStrip"
 import ProductGrid from "../components/ProductGrid"
 import Features from "../components/Features"
 import ReviewsMarquee from "../components/ReviewsMarquee"
@@ -60,6 +59,23 @@ export default function Home() {
         loadProducts(null, 8)
       }
     })()
+
+    const handleSettingsUpdate = (e) => {
+      if (e.detail) {
+        const s = e.detail
+        setHero(prev => ({
+          ...prev,
+          image: s.hero_image || prev.image,
+          headline: s.hero_headline || prev.headline,
+          subtext: s.hero_subtext || prev.subtext,
+          buttonText: s.hero_button_text || prev.buttonText,
+          buttonLink: s.hero_button_link || prev.buttonLink,
+        }))
+      }
+    }
+
+    window.addEventListener("settings-updated", handleSettingsUpdate)
+    return () => window.removeEventListener("settings-updated", handleSettingsUpdate)
   }, [])
 
   return (
@@ -72,8 +88,6 @@ export default function Home() {
           buttonText={hero.buttonText}
           buttonLink={hero.buttonLink}
         />
-
-        <CollectionStrip />
 
         {featuredProducts.length > 0 && (
           <ProductGrid

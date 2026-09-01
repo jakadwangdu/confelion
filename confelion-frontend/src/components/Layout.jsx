@@ -49,12 +49,12 @@ export default function Layout() {
       <AnnouncementBar />
       <Navigation />
 
-      <main className="min-h-screen bg-white">
+      <main className="min-h-screen bg-white pb-16 lg:pb-0">
         <Outlet />
       </main>
 
-      <footer className="border-t border-zinc-100 bg-zinc-50/50">
-        <div className="max-w-7xl mx-auto px-6 py-10">
+      <footer className="border-t border-zinc-100 bg-zinc-50/50 pb-16 lg:pb-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-2">
               <img src="/images/applogo.svg" alt={footer.siteName} className="h-6 w-auto mb-3" />
@@ -84,9 +84,9 @@ export default function Layout() {
               </nav>
             </div>
             <div>
-              <h4 className="font-black text-sm tracking-wide mb-3">Help</h4>
+              <h4 className="font-black text-sm tracking-wide mb-3 uppercase">Help &amp; Support</h4>
               <nav className="space-y-2">
-                <Link to="/cart" className="text-zinc-600 text-sm hover:text-black transition-colors block">Cart</Link>
+                <Link to="/cart" className="text-zinc-600 text-sm hover:text-black transition-colors block">Shopping Bag</Link>
                 <Link to="/login" className="text-zinc-600 text-sm hover:text-black transition-colors block">Account</Link>
                 <span className="text-zinc-600 text-sm block">Shipping: Free over &#x20B9;999</span>
                 <span className="text-zinc-600 text-sm block">Returns: Easy 7-day</span>

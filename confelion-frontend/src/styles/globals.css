@@ -205,15 +205,15 @@
 
   /* Layout Utilities */
   .container-main {
-    @apply max-w-[var(--container-max)] mx-auto px-[var(--container-padding)];
+    @apply max-w-[var(--container-max)] mx-auto px-3 sm:px-4 md:px-6;
   }
 
   .section {
-    @apply py-12 md:py-16 lg:py-20;
+    @apply py-8 sm:py-12 md:py-16 lg:py-20;
   }
 
   .section-sm {
-    @apply py-8 md:py-12;
+    @apply py-6 sm:py-8 md:py-12;
   }
 
   /* Text Utilities */
@@ -222,35 +222,35 @@
   }
 
   .heading-1 {
-    @apply text-4xl md:text-6xl lg:text-7xl font-black tracking-tight;
+    @apply text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black tracking-tight;
   }
 
   .heading-2 {
-    @apply text-3xl md:text-4xl font-black tracking-tight;
+    @apply text-2xl sm:text-3xl md:text-4xl font-black tracking-tight;
   }
 
   .heading-3 {
-    @apply text-2xl md:text-3xl font-black tracking-tight;
+    @apply text-xl sm:text-2xl md:text-3xl font-black tracking-tight;
   }
 
   .heading-4 {
-    @apply text-xl md:text-2xl font-black tracking-tight;
+    @apply text-lg sm:text-xl md:text-2xl font-black tracking-tight;
   }
 
   .body-lg {
-    @apply text-lg md:text-xl leading-relaxed;
+    @apply text-base sm:text-lg md:text-xl leading-relaxed;
   }
 
   .body-md {
-    @apply text-base md:text-lg leading-relaxed;
+    @apply text-sm sm:text-base md:text-lg leading-relaxed;
   }
 
   .body-sm {
-    @apply text-sm md:text-base leading-relaxed;
+    @apply text-xs sm:text-sm md:text-base leading-relaxed;
   }
 
   .caption {
-    @apply text-xs text-text-muted tracking-wide uppercase;
+    @apply text-[10px] sm:text-xs text-text-muted tracking-wide uppercase;
   }
 
   /* Animation Utilities */
@@ -326,11 +326,11 @@
 
   /* Product Grid */
   .product-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8;
+    @apply grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8;
   }
 
   .product-card {
-    @apply card-interactive animate-fade-in animate-slide-up-sm;
+    @apply card-interactive animate-fade-in animate-slide-up-sm rounded-xl overflow-hidden;
   }
 
   .product-card-image {
@@ -357,11 +357,11 @@
   }
 
   .product-card-content {
-    @apply p-3 md:p-4;
+    @apply p-2.5 sm:p-3 md:p-4;
   }
 
   .product-card-title {
-    @apply text-sm font-medium truncate transition-colors duration-200;
+    @apply text-xs sm:text-sm font-semibold truncate transition-colors duration-200;
   }
 
   .group:hover .product-card-title {
@@ -369,7 +369,7 @@
   }
 
   .product-card-meta {
-    @apply text-xs text-text-muted mt-1 truncate;
+    @apply text-[10px] sm:text-xs text-text-muted mt-0.5 sm:mt-1 truncate;
   }
 }
 
@@ -1117,4 +1117,79 @@
 
 .animate-slide-in-right {
   animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Luxury Streetwear & Apple UI Custom Styles */
+.price-rust {
+  color: #b43424;
+}
+
+.badge-new-street {
+  background: #000000;
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.hero-crossfade-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.hero-crossfade-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.pill-tab {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pill-tab-active {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.pill-tab-inactive {
+  background-color: transparent;
+  color: #71717a;
+}
+.pill-tab-inactive:hover {
+  color: #09090b;
+}
+
+.share-circle-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  border: 1px solid #e4e4e7;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #27272a;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.share-circle-btn:hover {
+  border-color: #18181b;
+  color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.share-circle-btn:active {
+  transform: scale(0.94);
 }
